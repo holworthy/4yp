@@ -17,15 +17,46 @@ Must:
 	Alert admins if difference in the supervisor and moderator marks is too high
 	Email all marks to the hub
 		Or allow a downloadable page which contains all the data
+	Allow hub staff/others to change student info
+	Permission tables
 
 Should:
 	Look nice
 	Allow admins to create pathways
+	Mixed media in project proposals
+		Videos
+		Images
+		Links
+	Emails for students on year in industry
+		Same for intercalated
+	Project genres/tags
+	Module prerequisites
+	Add github and overleaf links to projects
+	Multiple mark schemes
+	Resource links for projects
 
 Could:
 	Giving projects tags so students can search them eaiser
 	Sort admin data views however they want
 	Improve project assignment algorithm
+	Statistics on projects
+		Grade based on choice number
+	Maybe add approval system for projects
+		Different phases for project selection
+	Review proposals which have been up for years but not used
+	Allow for progress and engagement submission
+	Track progress and engagement through logging
+	Sorting out MComp groupings for projects
+	Multiple supervisors per project
+	Split view idea for marking
+	Markdown for feedback option
+	CSV with marking
+		Website gives you the format as a download
+	Organising meetings
+	Deadlines
+	Progress tracker
 
 Won't:
-	
+	OAuth Github, will just have links to repos
+	Not touching synoptic projects
+
