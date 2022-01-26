@@ -37,5 +37,24 @@ app.get("/studentoverview", (req, res) => {
 app.get("/submission", (req, res) => {
 	res.send("Submission");
 });
+app.get("/selectpathways", (req, res) => res.send("/selectpathways"));
+app.get("/cohorts", (req, res) => res.send("cohorts"));
+app.get("/cohort/new", (req, res) => res.send("new cohort"));
+app.get("/cohort/archived", (req, res) => res.send("archived cohorts"));
+app.get("/cohort/:id", (req, res) => res.send("cohort " + req.params.id));
+app.get("/myprojectproposals", (req, res) => res.send("myprojectproposals"));
+app.get("/projectproposal/new", (req, res) => res.send("new projectproposal"));
+app.get("/projectproposal/:id", (req, res) => res.send("projectproposal " + req.params.id));
+app.get("/mystudentprojects", (req, res) => res.send("mystudentprojects"));
+app.get("/project/:id", (req, res) => res.send("project " + req.params.id));
+app.get("/marking", (req, res) => res.send("/marking"));
+
+app.get("/assign", (req, res) => res.send("assign"));
+app.get("/projects", (req, res) => res.send("projects"));
+app.get("/pathways/new", (req, res) => res.send("new pathways"));
+app.get("/pathways", (req, res) => res.send("pathways"));
+app.get("/markschemes", (req, res) => res.send("markschemes"));
+app.get("/markschemes/new", (req, res) => res.send("new markschemes"));
+app.get("/markscheme/:id", (req, res) => res.send("markscheme" + req.params.id));
 
 app.listen(8080);
