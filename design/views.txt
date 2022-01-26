@@ -1,14 +1,40 @@
 views for students:
-	/login
+	/pathwayselect
+	/genreselect
+	/genres
+	/projectselection
+	/project/:id
+
+	/studentoverview
+	/submission
 
 views for supervisors:
-	/cohort
+	/selectpathways
+
+	/cohorts
 	/cohort/new
 	/cohort/archived
 	/cohort/:id
 
-	/projectproposal
+	/myprojectproposals
+	/projectproposal/new
 	/projectproposal/:id
+	/mystudentsprojects
+	/project/:id
+
+	/marking
+	
 
 views for admins:
-	
+	/assign
+	/projects
+	/pathways/new
+	/pathways
+	/markschemes
+	/markschemes/new
+	/markscheme/:id
+
+/login
+/logout
+/about
+/profile
