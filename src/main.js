@@ -25,7 +25,9 @@ app.get("/projectselection", (req, res) => {
 });
 
 app.get("/project/:id", (req, res) => {
-	res.send("Project overview with ID: "+req.params.id);
+	res.render("projectoverview", {
+		id: req.params.id
+	})
 });
 
 app.get("/studentoverview", (req, res) => {
