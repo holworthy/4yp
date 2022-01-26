@@ -1,5 +1,69 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap");
+
 * {
 	margin: 0;
 	padding: 0;
 	box-sizing: border-box;
+	font-family: "Roboto Condensed", sans-serif;
+}
+
+body {
+	overflow-y: scroll;
+	background-color: #eeeeee;
+}
+
+.container {
+	width: 60%;
+	margin: auto;
+}
+
+.white {
+	background-color: #fff;
+}
+
+.p1 {padding: 1rem;}
+.p1-top {padding-top: 1rem;}
+.p1-bottom {padding-bottom: 1rem;}
+.p1-left {padding-left: 1rem;}
+.p1-right {padding-right: 1rem;}
+.p2 {padding: 2rem;}
+.p2-top {padding-top: 2rem;}
+.p2-bottom {padding-bottom: 2rem;}
+.p2-left {padding-left: 2rem;}
+.p2-right {padding-right: 2rem;}
+.p4 {padding: 4rem;}
+.p4-top {padding-top: 4rem;}
+.p4-bottom {padding-bottom: 4rem;}
+.p4-left {padding-left: 4rem;}
+.p4-right {padding-right: 4rem;}
+.p8 {padding: 8rem;}
+.p8-top {padding-top: 8rem;}
+.p8-bottom {padding-bottom: 8rem;}
+.p8-left {padding-left: 8rem;}
+.p8-right {padding-right: 8rem;}
+.m1 {margin: 1rem;}
+.m1-top {margin-top: 1rem;}
+.m1-bottom {margin-bottom: 1rem;}
+.m1-left {margin-left: 1rem;}
+.m1-right {margin-right: 1rem;}
+.m2 {margin: 2rem;}
+.m2-top {margin-top: 2rem;}
+.m2-bottom {margin-bottom: 2rem;}
+.m2-left {margin-left: 2rem;}
+.m2-right {margin-right: 2rem;}
+.m4 {margin: 4rem;}
+.m4-top {margin-top: 4rem;}
+.m4-bottom {margin-bottom: 4rem;}
+.m4-left {margin-left: 4rem;}
+.m4-right {margin-right: 4rem;}
+.m8 {margin: 8rem;}
+.m8-top {margin-top: 8rem;}
+.m8-bottom {margin-bottom: 8rem;}
+.m8-left {margin-left: 8rem;}
+.m8-right {margin-right: 8rem;}
+.m-auto {margin: auto;}
+
+.bordered {
+	border-radius: 5px;
+	border: 1px solid #ddd;
 }
