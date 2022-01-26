@@ -1,0 +1,14 @@
+views for students:
+	/login
+
+views for supervisors:
+	/cohort
+	/cohort/new
+	/cohort/archived
+	/cohort/:id
+
+	/projectproposal
+	/projectproposal/:id
+
+views for admins:
+	
