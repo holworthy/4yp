@@ -25,13 +25,14 @@ db.serialize(() => {
 	db.run("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTEGER, tagId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (tagId) REFERENCES tags(id))");
 
 	db.run("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER)");
-	db.run("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+	db.run("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER)");
 	db.run("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 	db.run("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayID INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayID) REFERENCES pathways(id))");
 
 	db.run("INSERT OR IGNORE INTO users(name, nickname, email) VALUES ('Bob Bobson', 'Bob', 'bob@example.com')");
 	db.run("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
 	db.run("INSERT OR IGNORE INTO admins(userId) VALUES (1)");
+	db.run("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('an example', 0)");
 });
 
 
@@ -156,6 +157,131 @@ class Admin extends Profile {
 	}
 }
 
+class Cohort {
+	constructor(id, name, archived) {
+		this.id = id;
+		this.name = name;
+		this.archived = archived;
+	}
+
+	getId() {
+		return this.id;
+	}
+
+	getName() {
+		return this.name;
+	}
+
+	getArchived() {
+		return this.archived;
+	}
+
+	static getById(id, callback) {
+		let stmt = db.prepare("SELECT * FROM cohorts WHERE id = ?", [id]);
+		stmt.get((err, row) => {
+			callback(err || !row ? null : new Cohort(row.id, row.name, row.archived == 0 ? false : true));
+		});
+	}
+}
+
+class Pathway {
+	constructor(id, name) {
+		this.id = id;
+		this.name = name;
+		this.archived = archived;
+	}
+
+	getId() {
+		return this.id;
+	}
+
+	getName() {
+		return this.name;
+	}
+
+	getArchived() {
+		return this.archived;
+	}
+
+	static getById(id, callback) {
+		let stmt = db.prepare("SELECT * FROM cohorts WHERE id = ?", [id]);
+		stmt.get((err, row) => {
+			callback(err || !row ? null : new Cohort(row.id, row.name, row.archived == 0 ? false : true));
+		});
+	}
+}
+
+class Project {
+	constructor(id, projectProposalID) {
+		this.id = id;
+		this.projectProposalID = projectProposalID;
+	}
+
+	getId() {
+		return this.id;
+	}
+
+	getProjectProposalID() {
+		return this.projectProposalID;
+	}
+
+	static getById(id, callback) {
+		let stmt = db.prepare("SELECT * FROM projects WHERE id = ?", [id]);
+		stmt.get((err, row) => {
+			callback(err || !row ? null : new Cohort(row.id, row.projectProposalID));
+		});
+	}
+}
+
+class CohortStudent {
+	constructor(cohort, student, choice1, choice2, choice3, doneChoosing, project, deferring, pathway) {
+		this.cohort = cohort;
+		this.student = student;
+		this.choice1 = choice1;
+		this.choice2 = choice2;
+		this.choice3 = choice3;
+		this.doneChoosing = doneChoosing;
+		this.project = project;
+		this.deferring = deferring;
+		this.pathway = pathway;
+	}
+
+	getCohort() {
+		return this.cohort;
+	}
+
+	getStudent() {
+		return this.student;
+	}
+
+	getChoice1() {
+		return this.choice1;
+	}
+
+	getChoice2() {
+		return this.choice2;
+	}
+
+	getChoice3() {
+		return this.choice3;
+	}
+
+	getDoneChoosing() {
+		return this.doneChoosing;
+	}
+
+	getProject() {
+		return this.Project;
+	}
+
+	getDeferring() {
+		return this.deferring;
+	}
+
+	getPathway() {
+		return this.pathway;
+	}
+}
 
 // web server
 
