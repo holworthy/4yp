@@ -1,5 +1,9 @@
 let express = require("express");
 let app = express();
+let sqlite3 = require("sqlite3").verbose();
+
+let db = new sqlite3.Database("database.db");
+db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT)");
 
 app.use("/css", express.static("./css"));
 app.use("/js", express.static("./js"));
