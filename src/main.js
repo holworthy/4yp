@@ -11,10 +11,12 @@ let db = new sqlite3.Database("database.db");
 db.serialize(() => {
 	db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE)");
 	db.run("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userID INTEGER, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userID) REFERENCES users (id))");
-	db.run("CREATE TABLE IF NOT EXISTS supervisor (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
-	db.run("CREATE TABLE IF NOT EXISTS admin (id INTEGER PRIMARY KEY AUTOINCREMENT, userID INTEGER, FOREIGN KEY (userID) REFERENCES users (id))");
-	db.run("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
+	db.run("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
+	db.run("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userID INTEGER, FOREIGN KEY (userID) REFERENCES users (id))");
+	db.run("CREATE TABLE IF NOT EXISTS hubstaffs (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
 	db.run("INSERT OR IGNORE INTO users(name, nickname, email) VALUES ('Bob Bobson', 'Bob', 'bob@example.com')");
+	// db.run("INSERT OR IGNORE INTO students(userID, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
+	// db.run("INSERT OR IGNORE INTO admins(userID) VALUES (1)");
 });
 
 
@@ -50,6 +52,74 @@ class User {
 			callback(err || !row ? null : new User(row.id, row.name, row.nickname, row.email));
 		});
 		stmt.finalize();
+	}
+}
+
+class Student {
+	constructor(iD, user, campusCardNumber, threeTwoThree) {
+		this.iD = iD;
+		this.user = user;
+		this.campusCardNumber = campusCardNumber;
+		this.threeTwoThree = threeTwoThree;
+	}
+
+	getID() {
+		return this.iD;
+	}
+
+	getUser() {
+		return this.user;
+	}
+
+	getCampusCardNumber() {
+		return this.campusCardNumber;
+	}
+
+	getThreeTwoThree() {
+		return this.threeTwoThree;
+	}
+
+	static getByID(iD, callback) {
+		let stmt = db.prepare("SELECT * FROM students WHERE id = ?", [iD]);
+		stmt.get((err, row) => {
+			if (!(err || !row)) {
+				let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?", [row.userID]);
+				stmt2.get((err, row2) => {
+					callback(err || !row ? null : new Student(row.id, new User(row2.id, row2.name, row2.nickname, row2.email), row.campusCardNumber, row.threeTwoThree));
+				});
+			}
+			else
+				callback(null);
+		});
+	}
+}
+
+class Admin {
+	constructor(iD, user) {
+		this.iD = iD;
+		this.user = user;
+	}
+
+	getID() {
+		return this.iD;
+	}
+
+	getUser() {
+		return this.user;
+	}
+
+	static getByID(iD, callback) {
+		let stmt = db.prepare("SELECT * FROM admins WHERE id = ?", [iD]);
+		stmt.get((err, row) => {
+			if (err || !row)
+				callback(null);
+			else {
+				let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?", [row.userID]);
+				stmt2.get((err, row2) => {
+					callback(err || !row2 ? null : new Admin(row.id, new User(row2.id, row2.name, row2.nickname, row2.email)));
+				});
+			}
+		});
 	}
 }
 
