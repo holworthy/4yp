@@ -10,13 +10,28 @@ let sqlite3 = require("sqlite3").verbose();
 let db = new sqlite3.Database("database.db");
 db.serialize(() => {
 	db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE)");
-	db.run("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userID INTEGER, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userID) REFERENCES users (id))");
+	db.run("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userId) REFERENCES users (id))");
 	db.run("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
-	db.run("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userID INTEGER, FOREIGN KEY (userID) REFERENCES users (id))");
-	db.run("CREATE TABLE IF NOT EXISTS hubstaffs (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
+	db.run("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userID) REFERENCES users (id))");
+	db.run("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
+	
+	db.run("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+	db.run("CREATE TABLE IF NOT EXISTS markSchemeParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, weight INTEGER, markSchemeID INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markScheme(id))");
+	db.run("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, approved INTEGER, archived INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markScheme(id))");
+	db.run("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES supervisors(id))")
+	db.run("CREATE TABLE IF NOT EXISTS genres (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+	db.run("CREATE TABLE IF NOT EXISTS projectProposalsGenres (projectProposalId INTEGER, genreId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (genreId) REFERENCES genres(id))");
+	db.run("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+	db.run("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTEGER, tagId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (tagId) REFERENCES tags(id))");
+
+	db.run("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER)");
+	db.run("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+	db.run("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
+	db.run("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayID INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayID) REFERENCES pathways(id))");
+
 	db.run("INSERT OR IGNORE INTO users(name, nickname, email) VALUES ('Bob Bobson', 'Bob', 'bob@example.com')");
-	// db.run("INSERT OR IGNORE INTO students(userID, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
-	// db.run("INSERT OR IGNORE INTO admins(userID) VALUES (1)");
+	db.run("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
+	db.run("INSERT OR IGNORE INTO admins(userId) VALUES (1)");
 });
 
 
@@ -53,22 +68,49 @@ class User {
 		});
 		stmt.finalize();
 	}
+
+	// getProfiles() {
+	
+	// }
 }
 
-class Student {
-	constructor(iD, user, campusCardNumber, threeTwoThree) {
-		this.iD = iD;
+class Profile {
+	constructor(id, user) {
+		this.id = id;
 		this.user = user;
-		this.campusCardNumber = campusCardNumber;
-		this.threeTwoThree = threeTwoThree;
 	}
 
-	getID() {
-		return this.iD;
+	getId() {
+		return this.id;
 	}
 
 	getUser() {
 		return this.user;
+	}
+}
+
+class Supervisor extends Profile {
+	constructor(id, user, maxNumToSupervise) {
+		super(id, user);
+		this.maxNumToSupervise = maxNumToSupervise;
+	}
+
+	getMaxNumToSupervise() {
+		return this.maxNumToSupervise;
+	}
+}
+
+class HubStaff extends Profile {
+	constructor(id, user) {
+		super(id, user);
+	}
+}
+
+class Student extends Profile {
+	constructor(id, user, campusCardNumber, threeTwoThree) {
+		super(id, user);
+		this.campusCardNumber = campusCardNumber;
+		this.threeTwoThree = threeTwoThree;
 	}
 
 	getCampusCardNumber() {
@@ -79,11 +121,11 @@ class Student {
 		return this.threeTwoThree;
 	}
 
-	static getByID(iD, callback) {
-		let stmt = db.prepare("SELECT * FROM students WHERE id = ?", [iD]);
+	static getById(id, callback) {
+		let stmt = db.prepare("SELECT * FROM students WHERE id = ?", [id]);
 		stmt.get((err, row) => {
 			if (!(err || !row)) {
-				let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?", [row.userID]);
+				let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?", [row.userId]);
 				stmt2.get((err, row2) => {
 					callback(err || !row ? null : new Student(row.id, new User(row2.id, row2.name, row2.nickname, row2.email), row.campusCardNumber, row.threeTwoThree));
 				});
@@ -94,27 +136,18 @@ class Student {
 	}
 }
 
-class Admin {
-	constructor(iD, user) {
-		this.iD = iD;
-		this.user = user;
+class Admin extends Profile {
+	constructor(id, user) {
+		super(id, user);
 	}
 
-	getID() {
-		return this.iD;
-	}
-
-	getUser() {
-		return this.user;
-	}
-
-	static getByID(iD, callback) {
-		let stmt = db.prepare("SELECT * FROM admins WHERE id = ?", [iD]);
+	static getById(id, callback) {
+		let stmt = db.prepare("SELECT * FROM admins WHERE id = ?", [id]);
 		stmt.get((err, row) => {
 			if (err || !row)
 				callback(null);
 			else {
-				let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?", [row.userID]);
+				let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?", [row.userId]);
 				stmt2.get((err, row2) => {
 					callback(err || !row2 ? null : new Admin(row.id, new User(row2.id, row2.name, row2.nickname, row2.email)));
 				});
