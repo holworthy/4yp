@@ -47,15 +47,11 @@ class User {
 	static getById(id, callback) {
 		let stmt = db.prepare("SELECT * FROM users WHERE id = ?", [id]);
 		stmt.get((err, row) => {
-			callback(new User(row.id, row.name, row.nickname, row.email));
+			callback(err || !row ? null : new User(row.id, row.name, row.nickname, row.email));
 		});
 		stmt.finalize();
 	}
 }
-
-User.getById(1, user => {
-	console.log(user);
-});
 
 
 // web server
