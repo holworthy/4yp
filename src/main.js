@@ -82,9 +82,23 @@ class User {
 		return new User(row.id, row.name, row.nickname, row.email);
 	}
 
-	// getProfiles() {
-	
-	// }
+	getProfiles() {
+		let supervisor = Supervisor.getByUserId(this.id);
+		let hubstaff = HubStaff.getByUserId(this.id);
+		let student = Student.getByUserId(this.id);
+		let admin = Admin.getByUserId(this.id);
+
+		let profiles = [];
+		if(supervisor)
+			profiles.push(supervisor);
+		if(hubstaff)
+			profiles.push(hubstaff);
+		if(student)
+			profiles.push(student);
+		if(admin)
+			profiles.push(admin);
+		return profiles;
+	}
 }
 
 class Profile {
@@ -120,6 +134,12 @@ class Supervisor extends Profile {
 		let row2 = stmt2.get(row1.userId);
 		return new Supervisor(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email), row1.maxNumToSupervise);
 	}
+
+	static getByUserId(userId) {
+		let stmt = db.prepare("SELECT * FROM supervisors WHERE userId = ?");
+		let row = stmt.get(userId);
+		return row ? this.getById(row.id) : null;
+	}
 }
 
 class HubStaff extends Profile {
@@ -134,6 +154,12 @@ class HubStaff extends Profile {
 		let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?");
 		let row2 = stmt2.get(row1.userId);
 		return new HubStaff(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email));
+	}
+
+	static getByUserId(userId) {
+		let stmt = db.prepare("SELECT * FROM hubstaff WHERE userId = ?");
+		let row = stmt.get(userId);
+		return row ? this.getById(row.id) : null;
 	}
 }
 
@@ -160,6 +186,12 @@ class Student extends Profile {
 		let row2 = stmt2.get(row1.userId);
 		return new Student(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email), row1.campusCardNumber, row1.threeTwoThree);
 	}
+
+	static getByUserId(userId) {
+		let stmt = db.prepare("SELECT * FROM students WHERE userId = ?");
+		let row = stmt.get(userId);
+		return row ? this.getById(row.id) : null;
+	}
 }
 
 class Admin extends Profile {
@@ -174,6 +206,12 @@ class Admin extends Profile {
 		let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?");
 		let row2 = stmt2.get(row1.userId);
 		return new Admin(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email));
+	}
+
+	static getByUserId(userId) {
+		let stmt = db.prepare("SELECT * FROM admins WHERE userId = ?");
+		let row = stmt.get(userId);
+		return row ? this.getById(row.id) : null;
 	}
 }
 
