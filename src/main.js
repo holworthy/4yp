@@ -453,8 +453,6 @@ class ProjectProposal {
 	}
 }
 
-console.log(ProjectProposal.getById(1));
-
 
 // web server
 

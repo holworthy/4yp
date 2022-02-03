@@ -1,5 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap");
 
+:root {
+	--green: #44af69ff;
+	--red: #f8333cff;
+	--yellow: #fcab10ff;
+	--blue: #2b9eb3ff;
+	--cream: #dbd5b5ff;
+	--dark-cream: #b9b393;
+}
+
 * {
 	margin: 0;
 	padding: 0;
@@ -9,7 +18,7 @@
 
 body {
 	overflow-y: scroll;
-	background-color: #eeeeee;
+	background-color: var(--cream);
 }
 
 .container {
@@ -64,6 +73,27 @@ body {
 .m-auto {margin: auto;}
 
 .bordered {
-	border-radius: 5px;
-	border: 1px solid #ddd;
+	border-radius: 0.5rem;
+	border: 1px solid var(--dark-cream);
+}
+
+.success {
+	background-color: var(--green);
+}
+
+.warning {
+	background-color: var(--yellow);
+}
+
+.error {
+	background-color: var(--red);
+}
+
+.info {
+	background-color: var(--blue);
+}
+
+.rounded {
+	border-radius: 0.5rem;
+	border: 1px solid transparent;
 }
