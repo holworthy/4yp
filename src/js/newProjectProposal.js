@@ -1,7 +1,7 @@
 function checkMedia() {
-	if (document.getElementById("Media") == null || document.getElementById("Media").files.length == 0) {
-		document.getElementById("MediaAlert").style.visibility = "visible";
+	if (document.getElementById("media") == null || document.getElementById("media").files.length == 0) {
+		document.getElementById("mediaAlert").style.visibility = "visible";
 	} else {
-		document.getElementById("MediaAlert").style.visibility = "hidden";
+		document.getElementById("mediaAlert").style.visibility = "hidden";
 	}
 }

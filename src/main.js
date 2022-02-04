@@ -6,8 +6,11 @@ let betterSqlite3 = require("better-sqlite3");
 let bodyParser = require("body-parser");
 let sha256 = require("sha256");
 let betterSqlite3SessionStore = require("better-sqlite3-session-store");
+let expressFileUpload = require("express-fileupload");
+let mime = require("mime-types");
 
 let app = express();
+let db = betterSqlite3("database.db");
 
 app.use(bodyParser.urlencoded({
 	extended: false
@@ -15,11 +18,6 @@ app.use(bodyParser.urlencoded({
 app.use("/css", express.static("./css"));
 app.use("/js", express.static("./js"));
 app.set("view engine", "pug");
-
-
-// table definitions
-
-let db = betterSqlite3("database.db");
 app.use(expressSession({
 	store: new (betterSqlite3SessionStore(expressSession))({
 		client: db
@@ -28,6 +26,15 @@ app.use(expressSession({
 	resave: false,
 	saveUninitialized: false
 }));
+app.use(expressFileUpload({
+	createParentPath: true,
+	useTempFiles: true,
+	limits: {
+		fileSize: 50 * (1 << 20)
+	}
+}));
+
+// table definitions
 
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT)");
 db.exec("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userId) REFERENCES users (id))");
@@ -38,7 +45,8 @@ db.exec("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREME
 db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, approved INTEGER, archived INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
-db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES supervisors(id))")
+db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES supervisors(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INTEGER, url TEXT, type TEXT, UNIQUE(projectProposalId, url), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS genres (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsGenres (projectProposalId INTEGER, genreId INTEGER, UNIQUE (projectProposalId, genreId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (genreId) REFERENCES genres(id))");
 db.exec("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -482,6 +490,9 @@ app.get("/", (req, res) => {
 	else
 		res.redirect("/login");
 });
+
+app.get("/uea.png", (req, res) => res.sendFile("uea.png", {root: "."}));
+
 app.get("/about", (req, res) => res.render("about"));
 
 app.get("/login", (req, res) => {
@@ -553,6 +564,32 @@ app.get("/cohort/archived", (req, res) => res.send("archived cohorts"));
 app.get("/cohort/:id", (req, res) => res.send("cohort " + req.params.id));
 app.get("/myprojectproposals", (req, res) => res.send("myprojectproposals"));
 app.get("/projectproposal/new", (req, res) => res.render("newProjectProposal"));
+
+app.use("/uploads", express.static("./uploads"));
+app.post("/projectproposal/new", (req, res) => {
+	if(req.session.loggedIn) {
+		let title = req.body.title;
+		let description = req.body.description;
+
+		let files = req.files;
+		for(let i = 0; i < req.files.media.length; i++) {
+			let file = req.files.media[i];
+			if(file.truncated) {
+				// TODO: file too big!
+			} else {
+				file.mv("./uploads/" + file.md5 + "." + mime.extension(file.mimetype));
+			}
+		}
+
+		// TODO: add to database
+		
+		res.redirect("/projectproposal/new");
+	} else {
+		res.redirect("/");
+	}
+});
+
+
 app.get("/projectproposal/:id", (req, res) => res.send("projectproposal " + req.params.id));
 app.get("/mystudentprojects", (req, res) => res.send("mystudentprojects"));
 app.get("/project/:id", (req, res) => res.send("project " + req.params.id));
