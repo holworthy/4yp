@@ -469,6 +469,13 @@ class ProjectProposal {
 app.get("/", (req, res) => res.render("index"));
 app.get("/about", (req, res) => res.render("about"));
 
+app.get("/login", (req, res) => {
+	// page
+});
+app.post("/login", (req, res) => {
+	// submission
+});
+
 app.get("/pathwayselect", (req, res) => {
 	res.send("Pathway Selection");
 });
