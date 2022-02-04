@@ -6,6 +6,7 @@ html(lang="en")
 	body 
 		.container.white.p1.m1-top.bordered
 			h1 Login 
-			form(method="post")
-				input.m1-top(type="email", name="email")
-				input.m1-top(type="password", name="password")
+			form.login_input_flexbox(method="post")
+				input.login_input.m1-top(type="email", name="email")
+				input.login_input.m1-top(type="password", name="password")
+				input.login_submit.m1-top(type="submit")

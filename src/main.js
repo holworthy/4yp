@@ -470,7 +470,7 @@ app.get("/", (req, res) => res.render("index"));
 app.get("/about", (req, res) => res.render("about"));
 
 app.get("/login", (req, res) => {
-	// page
+	res.render("login");
 });
 app.post("/login", (req, res) => {
 	// submission

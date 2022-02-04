@@ -97,3 +97,23 @@ body {
 	border-radius: 0.5rem;
 	border: 1px solid transparent;
 }
+
+.login_input_flexbox {
+	display: flex;
+	flex-flow: column nowrap;
+	justify-content: center;
+	align-items: center;
+	align-content: space-around;
+	gap: 0.25rem;
+}
+
+.login_input {
+	height: 2rem;
+	width: 50%;
+	padding: 0.5rem;
+}
+
+.login_submit {
+	height: 2rem;
+	width: 25%;
+}
