@@ -98,7 +98,7 @@ body {
 	border: 1px solid transparent;
 }
 
-.login_input_flexbox {
+.input_flexbox {
 	display: flex;
 	flex-flow: column nowrap;
 	justify-content: center;
@@ -109,11 +109,24 @@ body {
 
 .login_input {
 	height: 2rem;
-	width: 50%;
+	width: 80%;
 	padding: 0.5rem;
 }
 
 .login_submit {
 	height: 2rem;
 	width: 25%;
+}
+
+.title_input {
+	height: rem;
+	width: 80%;
+	padding: 0.5rem;
+	font-size: 2rem;
+}
+
+.description_input {
+	padding: 0.5rem;
+	width: 80%;
+	resize: none;
 }
