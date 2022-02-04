@@ -3,12 +3,14 @@
 let express = require("express");
 let expressSession = require("express-session");
 let betterSqlite3 = require("better-sqlite3");
+let bodyParser = require("body-parser");
+let sha256 = require("sha256");
+let betterSqlite3SessionStore = require("better-sqlite3-session-store");
 
 let app = express();
-app.use(expressSession({
-	secret: "hereisasecret",
-	resave: false,
-	saveUninitialized: false
+
+app.use(bodyParser.urlencoded({
+	extended: false
 }));
 app.use("/css", express.static("./css"));
 app.use("/js", express.static("./js"));
@@ -18,8 +20,16 @@ app.set("view engine", "pug");
 // table definitions
 
 let db = betterSqlite3("database.db");
+app.use(expressSession({
+	store: new (betterSqlite3SessionStore(expressSession))({
+		client: db
+	}),
+	secret: "hereisasecret",
+	resave: false,
+	saveUninitialized: false
+}));
 
-db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE)");
+db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT)");
 db.exec("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userId) REFERENCES users (id))");
 db.exec("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userID) REFERENCES users (id))");
@@ -39,7 +49,7 @@ db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREME
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayID INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayID) REFERENCES pathways(id))");
 
-db.exec("INSERT OR IGNORE INTO users(name, nickname, email) VALUES ('Bob Bobson', 'Bob', 'bob@example.com')");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash) VALUES ('Bob Bobson', 'Bob', 'bob@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564')");
 db.exec("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
 db.exec("INSERT OR IGNORE INTO admins(userId) VALUES (1)");
 db.exec("INSERT OR IGNORE INTO supervisors(userId, maxNumToSupervise) VALUES (1, 5)");
@@ -466,14 +476,45 @@ class ProjectProposal {
 
 // web server
 
-app.get("/", (req, res) => res.render("index"));
+app.get("/", (req, res) => {
+	if(req.session.loggedIn)
+		res.redirect("/overview");
+	else
+		res.redirect("/login");
+});
 app.get("/about", (req, res) => res.render("about"));
 
 app.get("/login", (req, res) => {
-	res.render("login");
+	if(req.session.loggedIn)
+		res.redirect("/overview");
+	else
+		res.render("login");
 });
 app.post("/login", (req, res) => {
-	// submission
+	let email = req.body.email;
+	let password = req.body.password;
+
+	let stmt = db.prepare("SELECT * FROM users WHERE email = ?");
+	let row = stmt.get(email);
+
+	if(!row) {
+		res.redirect("/login");
+	} else {
+		if(sha256(row.salt + password) == row.passwordHash) {
+			req.session.loggedIn = true;
+			req.session.userId = row.id;
+			req.session.save();
+			res.redirect("/overview");
+		} else {
+			res.redirect("/login");
+		}
+	}
+});
+
+app.get("/logout", (req, res) => {
+	req.session.loggedIn = false;
+	req.session.save();
+	res.redirect("/");
 });
 
 app.get("/pathwayselect", (req, res) => {
