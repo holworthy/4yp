@@ -1,8 +1,18 @@
 // imports
 
 let express = require("express");
-let app = express();
+let expressSession = require("express-session");
 let betterSqlite3 = require("better-sqlite3");
+
+let app = express();
+app.use(expressSession({
+	secret: "hereisasecret",
+	resave: false,
+	saveUninitialized: false
+}));
+app.use("/css", express.static("./css"));
+app.use("/js", express.static("./js"));
+app.set("view engine", "pug");
 
 
 // table definitions
@@ -455,10 +465,6 @@ class ProjectProposal {
 
 
 // web server
-
-app.use("/css", express.static("./css"));
-app.use("/js", express.static("./js"));
-app.set("view engine", "pug");
 
 app.get("/", (req, res) => res.render("index"));
 app.get("/about", (req, res) => res.render("about"));
