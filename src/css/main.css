@@ -137,4 +137,12 @@ body {
 
 .alert {
 	width: 80%;
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.alert_icon {
+	height: 2rem;
 }

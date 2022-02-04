@@ -566,4 +566,6 @@ app.get("/markschemes", (req, res) => res.send("markschemes"));
 app.get("/markschemes/new", (req, res) => res.send("new markschemes"));
 app.get("/markscheme/:id", (req, res) => res.send("markscheme" + req.params.id));
 
+app.use("/media", express.static("./media"))
+
 app.listen(8080);
