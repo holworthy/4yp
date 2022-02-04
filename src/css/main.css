@@ -30,6 +30,10 @@ body {
 	background-color: #fff;
 }
 
+.blue {
+	background-color: var(--blue);
+}
+
 .p1 {padding: 1rem;}
 .p1-top {padding-top: 1rem;}
 .p1-bottom {padding-bottom: 1rem;}
@@ -129,4 +133,8 @@ body {
 	padding: 0.5rem;
 	width: 80%;
 	resize: none;
+}
+
+.alert {
+	width: 80%;
 }

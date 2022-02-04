@@ -3,6 +3,7 @@ html(lang="en")
 		title Project
 		meta(http-equiv="Content-Type", content="text/html;charset=UTF-8")
 		link(rel="stylesheet", href="/css/main.css")
+		script(src="/js/newProjectProposal.js") 
 	body 
 		.container.white.p1.m1-top.bordered
 			h1 New Project Proposal
@@ -10,5 +11,7 @@ html(lang="en")
 			form.input_flexbox(method="post")
 				input.title_input.m1-top(type="text", name="Title", Placeholder="Title")
 				textarea.description_input.m1-top(name="Description", Placeholder="Description", rows="20")
-				input.login_input.m1-top(type="file", name="Media")
+				input.login_input.m1-top(type="file", id="Media", name="Media", onChange="checkMedia()")
+				.alert.container.blue.p1.m1-top.bordered(id="MediaAlert") 
+					h3 You haven't added any media
 				input.login_submit.m1-top(type="submit")
