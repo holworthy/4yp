@@ -1,0 +1,17 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		.container.p1.m1-top
+			h1.m1-bottom Cohorts
+			.cohorts
+				- for(let i = 0; i < cohorts.length; i++)
+						a.cohort(href="/cohort/"+cohorts[i].id)
+							h2 #{cohorts[i].name}
+							p Created on ????-??-??
+							p ??? Students
+			a.m1-top(href="/cohort/new")
+				h2 Or Create A New Cohort 
+			

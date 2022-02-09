@@ -18,12 +18,15 @@
 
 body {
 	overflow-y: scroll;
-	background-color: var(--cream);
+	background-color: #eee;
 }
 
 .container {
 	width: 60%;
 	margin: auto;
+	background-color: #fff;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
 }
 
 .white {
@@ -76,9 +79,27 @@ body {
 .m8-right {margin-right: 8rem;}
 .m-auto {margin: auto;}
 
+header {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	position: sticky;
+	top: 0;
+	left: 0;
+	right: 0;
+}
+
+header div {
+	width: 60%;
+	margin: auto;
+	padding: 1rem;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
 .bordered {
-	border-radius: 0.5rem;
-	border: 1px solid var(--dark-cream);
+	border-radius: 0.25rem;
+	border: 1px solid #ccc;
 }
 
 .success {
@@ -145,4 +166,67 @@ body {
 
 .alert_icon {
 	height: 2rem;
+}
+
+form input {
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	display: block;
+}
+
+form label {
+	display: block;
+}
+
+.cohort {
+	width: 100%;
+	padding: 1rem;
+	margin-bottom: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	text-decoration: none;
+	color: #000;
+}
+
+.cohort:hover h2 {
+	text-decoration: underline;
+}
+
+div a {
+	display: block;
+	text-decoration: underline;
+	color: #000;
+}
+
+/* tables */
+
+table {
+	border: 1px solid #ccc;
+	border-collapse: collapse;
+}
+
+table td, table th {
+	border: 1px solid #ccc;
+	padding: 1rem;
+}
+
+input {
+	display: block;
+	padding: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+}
+
+.cohort-student-div {
+	padding-top: 1rem;
+}
+
+.cohort-student-div p {
+	display: inline-block;
+	margin-right: 1rem;
+}
+
+button {
+	padding: 1rem;
 }

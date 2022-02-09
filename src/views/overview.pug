@@ -1,0 +1,19 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body 
+		include includes/header.pug
+		.container.white.bordered.p1.m1-top
+			h1 Hello, #{user.nickname}
+			p Things you can do:
+
+			a(href="#") Approve project proposals
+			br
+			a(href="#") View project proposals
+			br
+			a(href="/cohorts") View cohorts
+			br
+			a(href="/cohort/new") Create a cohort 
+			br
+			a(href="#") Select a project 

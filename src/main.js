@@ -37,9 +37,9 @@ app.use(expressFileUpload({
 // table definitions
 
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT)");
-db.exec("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userId) REFERENCES users (id))");
+db.exec("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, campusCardNumber TEXT, threeTwoThree TEXT, FOREIGN KEY (userId) REFERENCES users (id))");
 db.exec("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
-db.exec("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userID) REFERENCES users (id))");
+db.exec("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users (id))");
 db.exec("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
 
 db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -55,7 +55,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTE
 db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
-db.exec("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayID INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayID) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash) VALUES ('Bob Bobson', 'Bob', 'bob@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564')");
 db.exec("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
@@ -344,10 +344,28 @@ class Cohort {
 		return this.archived;
 	}
 
+	getStudents() {
+		let stmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ?");
+		let students = [];
+		let rows = stmt.all(this.id);
+		for(let i = 0; i < rows.length; i++)
+			students.push(new CohortStudent(rows[i].cohortId, Student.getById(rows[i].studentId), rows[i].choice1, rows[i].choice2, rows[i].choice3, rows[i].doneChoosing, Project.getById(rows[i].projectId), rows[i].deferring, null));
+		return students;
+	}
+
 	static getById(id) {
 		let stmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
 		let row = stmt.get(id);
-		return new Cohort(row.id, row.name, row.archived == 0 ? false : true);
+		return new Cohort(row.id, row.name, row.archived == 1);
+	}
+
+	static getAll() {
+		let stmt = db.prepare("SELECT * FROM cohorts WHERE archived = 0");
+		let cohorts = [];
+		let rows = stmt.all();
+		for(let i = 0; i < rows.length; i++)
+			cohorts.push(new Cohort(rows[i].id, rows[i].name, rows[i].archived == 1));
+		return cohorts;
 	}
 }
 
@@ -394,7 +412,7 @@ class Project {
 	static getById(id) {
 		let stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
 		let row = stmt.get(id);
-		return new Cohort(row.id, row.projectProposalId);
+		return row ? new Cohort(row.id, row.projectProposalId) : null;
 	}
 }
 
@@ -558,10 +576,57 @@ app.get("/submission", (req, res) => {
 	res.send("Submission");
 });
 app.get("/selectpathways", (req, res) => res.send("/selectpathways"));
-app.get("/cohorts", (req, res) => res.send("cohorts"));
-app.get("/cohort/new", (req, res) => res.send("new cohort"));
+app.get("/cohort/new", (req, res) => {
+	res.render("cohortNew");
+});
+app.post("/cohort/new", (req, res) => {
+	let name = req.body.name;
+	if(name) {
+		try {
+			let stmt = db.prepare("INSERT INTO cohorts(name, archived) VALUES (?, 0)");
+			stmt.run(name);
+
+			stmt = db.prepare("SELECT * FROM cohorts ORDER BY id DESC LIMIT 1");
+			let row = stmt.get();
+
+			res.redirect("/cohort/" + row.id);
+		} catch(e) {
+			console.log(e);
+			res.redirect("/cohort/new"); // TODO: add error message
+		}
+	} else {
+		res.redirect("/cohort/new"); // TODO: add error message
+	}
+});
 app.get("/cohort/archived", (req, res) => res.send("archived cohorts"));
-app.get("/cohort/:id", (req, res) => res.send("cohort " + req.params.id));
+app.get("/cohort/:id", (req, res) => {
+	try {
+		res.render("cohort", {cohort: Cohort.getById(req.params.id)});
+	} catch(e) {
+		res.redirect("/cohorts");
+	}
+});
+app.get("/cohort", (req, res) => res.redirect("/cohorts"));
+app.get("/cohorts", (req, res) => res.render("cohorts", {cohorts: Cohort.getAll()}));
+app.get("/api/student-search", (req, res) => {
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("SELECT students.id, userId, name, email FROM students INNER JOIN users ON students.userId = users.id WHERE users.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
+		res.send(JSON.stringify(stmt.all(req.query.name)));
+	}
+});
+app.get("/api/add-student-to-cohort", (req, res) => {
+	// TODO: permission check
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsStudents(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring, pathwayId) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0, NULL)"); // TODO: check for SQL injection
+		stmt.run(req.query.cohortId, req.query.studentId);
+		res.sendStatus(200);
+	}
+});
+
 app.get("/myprojectproposals", (req, res) => res.send("myprojectproposals"));
 app.get("/projectproposal/new", (req, res) => res.render("newProjectProposal"));
 
@@ -574,6 +639,7 @@ app.post("/projectproposal/new", (req, res) => {
 		let files = req.files;
 		for(let i = 0; i < req.files.media.length; i++) {
 			let file = req.files.media[i];
+			console.log(file);
 			if(file.truncated) {
 				// TODO: file too big!
 			} else {
@@ -602,6 +668,11 @@ app.get("/pathways", (req, res) => res.send("pathways"));
 app.get("/markschemes", (req, res) => res.send("markschemes"));
 app.get("/markschemes/new", (req, res) => res.send("new markschemes"));
 app.get("/markscheme/:id", (req, res) => res.send("markscheme" + req.params.id));
+
+app.get("/overview", (req, res) => {
+	res.render("overview", {user: User.getById(req.session.userId)});
+});
+
 
 app.use("/media", express.static("./media"))
 
