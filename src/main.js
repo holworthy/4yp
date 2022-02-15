@@ -15,6 +15,7 @@ let db = betterSqlite3("database.db");
 app.use(bodyParser.urlencoded({
 	extended: false
 }));
+app.use(bodyParser.json());
 app.use("/css", express.static("./css"));
 app.use("/js", express.static("./js"));
 app.set("view engine", "pug");
@@ -267,10 +268,19 @@ class MarkScheme {
 		let row1 = stmt1.get(id);
 		
 		let markScheme = new MarkScheme(row1.id, row1.name);
-		let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE id = ?");
+		let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
 		stmt2.all(id).forEach(row2 => markScheme.parts.push(new MarkSchemePart(row2.id, row2.name, row2.weight, markScheme)));
 
 		return markScheme;
+	}
+
+	static getAll() {
+		let stmt = db.prepare("SELECT * FROM markschemes");
+		let markschemes = [];
+		let rows = stmt.all();
+		for(let i = 0; i < rows.length; i++)
+			markschemes.push(new MarkScheme(rows[i].id, rows[i].name));
+		return markschemes;
 	}
 }
 
@@ -577,7 +587,7 @@ app.get("/submission", (req, res) => {
 });
 app.get("/selectpathways", (req, res) => res.send("/selectpathways"));
 app.get("/cohort/new", (req, res) => {
-	res.render("cohortNew");
+	res.render("cohort-new");
 });
 app.post("/cohort/new", (req, res) => {
 	let name = req.body.name;
@@ -665,9 +675,36 @@ app.get("/assign", (req, res) => res.send("assign"));
 app.get("/projects", (req, res) => res.send("projects"));
 app.get("/pathways/new", (req, res) => res.send("new pathways"));
 app.get("/pathways", (req, res) => res.send("pathways"));
-app.get("/markschemes", (req, res) => res.send("markschemes"));
-app.get("/markschemes/new", (req, res) => res.send("new markschemes"));
-app.get("/markscheme/:id", (req, res) => res.send("markscheme" + req.params.id));
+
+app.get("/markscheme", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));
+app.get("/markscheme/new", (req, res) => res.render("markschemes-new"));
+app.post("/api/markscheme/new", (req, res) => {
+	let name = req.body.name;
+	let parts = req.body.parts;
+
+	let stmt = db.prepare("INSERT OR IGNORE INTO markSchemes(name) VALUES (?)");
+	stmt.run(name);
+
+	// TODO: check if this fails
+	stmt = db.prepare("SELECT id, name FROM markSchemes WHERE name = ?");
+	let markSchemeId = stmt.get(name).id;
+
+	for(let i = 0; i < parts.length; i++) {
+		let part = parts[i];
+		stmt = db.prepare("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES (?, ?, ?)");
+		stmt.run(part.name, part.weight, markSchemeId);
+		// TODO: check if this fails
+	}
+
+	res.send(JSON.stringify({
+		markSchemeId: markSchemeId
+	}));
+});
+app.get("/markscheme/:id", (req, res) => {
+	let markScheme = MarkScheme.getById(req.params.id);
+	console.log(markScheme);
+	res.render("markscheme", {markScheme: markScheme});
+});
 
 app.get("/overview", (req, res) => {
 	res.render("overview", {user: User.getById(req.session.userId)});

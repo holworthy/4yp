@@ -193,6 +193,16 @@ form label {
 	text-decoration: underline;
 }
 
+.markscheme {
+	width: 100%;
+	padding: 1rem;
+	margin-bottom: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	text-decoration: none;
+	color: #000;
+}
+
 div a {
 	display: block;
 	text-decoration: underline;
@@ -204,18 +214,40 @@ div a {
 table {
 	border: 1px solid #ccc;
 	border-collapse: collapse;
+	width: 100%;
 }
 
 table td, table th {
 	border: 1px solid #ccc;
-	padding: 1rem;
+	padding: 0.5rem;
 }
+
+/* forms */
 
 input {
 	display: block;
-	padding: 1rem;
+	width: 100%;
+	padding: 0.5rem;
 	border: 1px solid #ccc;
 	border-radius: 0.25rem;
+}
+
+.flex {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.flex-row {
+	flex-direction: row;
+}
+
+.flex-1 {
+	flex: 1;
+}
+
+button {
+	padding: 0.5rem;
+	width: 100%;
 }
 
 .cohort-student-div {
@@ -227,6 +259,3 @@ input {
 	margin-right: 1rem;
 }
 
-button {
-	padding: 1rem;
-}

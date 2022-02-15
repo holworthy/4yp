@@ -1,0 +1,23 @@
+doctype html
+html
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		.container.m1-top.p1.bordered.white
+			h2 #{markScheme.name}
+			table.m1-top
+				thead
+					tr
+						th Name
+						th Weight
+				tbody
+					- for(let i = 0; i < markScheme.parts.length; i++) {
+					tr
+						td #{markScheme.parts[i].name}
+						td #{markScheme.parts[i].weight}
+					- }
+					- if(markScheme.parts.length == 0) {
+					tr
+						td(colspan="2") No parts in this markscheme
+					- }
