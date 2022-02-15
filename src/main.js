@@ -702,7 +702,6 @@ app.post("/api/markscheme/new", (req, res) => {
 });
 app.get("/markscheme/:id", (req, res) => {
 	let markScheme = MarkScheme.getById(req.params.id);
-	console.log(markScheme);
 	res.render("markscheme", {markScheme: markScheme});
 });
 
