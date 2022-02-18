@@ -8,10 +8,10 @@ html(lang="en")
 			h1.m1-bottom Cohorts
 			.cohorts
 				- for(let i = 0; i < cohorts.length; i++)
-						a.cohort(href="/cohort/"+cohorts[i].id)
-							h2 #{cohorts[i].name}
-							p Created on ????-??-??
-							p ??? Students
+					a.cohort(href="/cohort/"+cohorts[i].id)
+						h2 #{cohorts[i].name}
+						p Created on ????-??-??
+						p ??? Students
 			a.m1-top(href="/cohort/new")
 				h2 Or Create A New Cohort 
 			

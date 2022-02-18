@@ -1,0 +1,13 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body 
+		include includes/header.pug
+		.container.white.bordered.p1.m1-top
+			h1.m1-bottom Create a Pathway
+			form(method="post") 
+				label(for="name") Pathway Name:
+				input(type="text" name="name")
+				input.m1-top(type="submit" value="Create Pathway")
+				

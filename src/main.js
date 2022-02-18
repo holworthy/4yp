@@ -383,7 +383,7 @@ class Pathway {
 	constructor(id, name) {
 		this.id = id;
 		this.name = name;
-		this.archived = archived;
+		// this.archived = archived;
 	}
 
 	getId() {
@@ -394,14 +394,23 @@ class Pathway {
 		return this.name;
 	}
 
-	getArchived() {
-		return this.archived;
-	}
+	// getArchived() {
+	// 	return this.archived;
+	// }
 
 	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
+		let stmt = db.prepare("SELECT * FROM pathways WHERE id = ?");
 		let row = stmt.get(id);
-		return new Cohort(row.id, row.name, row.archived == 0 ? false : true);
+		return new Pathway(row.id, row.name);
+	}
+
+	static getAll() {
+		let stmt = db.prepare("SELECT * FROM pathways");
+		let pathways = [];
+		let rows = stmt.all();
+		for(let i = 0; i < rows.length; i++)
+			pathways.push(new Pathway(rows[i].id, rows[i].name));
+		return pathways;
 	}
 }
 
@@ -673,8 +682,35 @@ app.get("/marking", (req, res) => res.send("/marking"));
 
 app.get("/assign", (req, res) => res.send("assign"));
 app.get("/projects", (req, res) => res.send("projects"));
-app.get("/pathways/new", (req, res) => res.send("new pathways"));
-app.get("/pathways", (req, res) => res.send("pathways"));
+
+app.get("/pathways", (req, res) => res.render("pathways", {pathways: Pathway.getAll()}));
+app.get("/pathways/new", (req, res) => res.render("pathways-new"));
+app.post("/pathways/new", (req, res) => {
+	let name = req.body.name;
+	if(name) {
+		try {
+			let stmt = db.prepare("INSERT INTO pathways(name) VALUES (?)");
+			stmt.run(name);
+
+			stmt = db.prepare("SELECT * FROM pathways ORDER BY id DESC LIMIT 1");
+			let row = stmt.get();
+
+			res.redirect("/pathways/" + row.id);
+		} catch(e) {
+			console.log(e);
+			res.redirect("/pathways/new"); // TODO: add error message
+		}
+	} else {
+		res.redirect("/pathways/new"); // TODO: add error message
+	}
+});
+app.get("/pathways/:id", (req, res) => {
+	try {
+		res.render("pathway", {pathway: Pathway.getById(req.params.id)});
+	} catch(e) {
+		res.redirect("/pathways");
+	}
+});
 
 app.get("/markscheme", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));
 app.get("/markscheme/new", (req, res) => res.render("markschemes-new"));
@@ -710,6 +746,6 @@ app.get("/overview", (req, res) => {
 });
 
 
-app.use("/media", express.static("./media"))
+app.use("/media", express.static("./media"));
 
 app.listen(8080);

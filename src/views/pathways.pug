@@ -1,0 +1,16 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body 
+		include includes/header.pug
+		.container.white.bordered.p1.m1-top
+			h1.m1-bottom Pathways
+			.pathways
+				- for(let i = 0; i < pathways.length; i++)
+					a.pathway(href="/pathways/"+pathways[i].id)
+						h2 #{pathways[i].name}
+				- if(pathways.length == 0)
+					p No pathways exist yet!
+			a.m1-top(href="/pathways/new")
+				h2 Or Create A New Pathway 
