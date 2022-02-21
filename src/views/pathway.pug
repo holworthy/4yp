@@ -7,6 +7,26 @@ html(lang="en")
 		include includes/header.pug
 		.container.m1-top.p1
 			h2 #{pathway.name}
-			p See what projects are in this pathway
-			p See what students are in this pathway
-			p See what moderators moderate this pathway
+			div
+				div
+					h3 See what projects are in this pathway
+					div
+						p Nothing here
+				div
+					h3 See what students are in this pathway
+					div
+						- for(let i = 0; i < cohorts.length; i++) {
+						div
+							p #{cohorts[i].name}
+							div
+								- for(let j = 0; j < cohorts[i].students.length; j++) {
+									p #{cohorts[i].students[j].user.name}
+									p #{cohorts[i].students[j].user.email}
+									p #{cohorts[i].students[j].user.campusCardNumber}
+									a(href="/students/" + cohorts[i].students[j].id) Go To Student
+								- }
+						- }
+				div
+					h3 See what moderators moderate this pathway
+					div
+						p Nothing here
