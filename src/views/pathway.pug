@@ -13,17 +13,26 @@ html(lang="en")
 					div
 						p Nothing here
 				div
-					h3 See what students are in this pathway
-					div
+					h3.m1-bottom See what students are in this pathway
+					.pathway-cohorts
 						- for(let i = 0; i < cohorts.length; i++) {
-						div
-							p #{cohorts[i].name}
-							div
+						details.pathway-cohort
+							summary #{cohorts[i].name}
+							table.pathway-cohort-students
+								thead
+									tr
+										th Name
+										th Email
+										th Campus Card Number
+										th Link
+								tbody
 								- for(let j = 0; j < cohorts[i].students.length; j++) {
-									p #{cohorts[i].students[j].user.name}
-									p #{cohorts[i].students[j].user.email}
-									p #{cohorts[i].students[j].user.campusCardNumber}
-									a(href="/students/" + cohorts[i].students[j].id) Go To Student
+									tr.pathway-cohort-student
+										td #{cohorts[i].students[j].user.name}
+										td #{cohorts[i].students[j].user.email}
+										td #{cohorts[i].students[j].user.campusCardNumber}
+										td
+											a(href="/students/" + cohorts[i].students[j].id) Go To Student
 								- }
 						- }
 				div

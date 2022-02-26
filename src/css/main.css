@@ -259,6 +259,8 @@ button {
 	margin-right: 1rem;
 }
 
+/* pathways */
+
 .pathway {
 	width: 100%;
 	padding: 1rem;
@@ -271,4 +273,28 @@ button {
 
 .pathway:hover h2 {
 	text-decoration: underline;
+}
+
+.pathway-cohorts {
+	
+}
+
+.pathway-cohort {
+	padding: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.pathway-cohort summary {
+	font-weight: bolder;
+}
+
+.pathway-cohort-students {
+	table-layout: fixed;
+	margin-top: 1rem;
+}
+
+.pathway-cohort-student {
+
 }

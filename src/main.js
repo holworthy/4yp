@@ -39,9 +39,9 @@ app.use(expressFileUpload({
 
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT)");
 db.exec("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, campusCardNumber TEXT UNIQUE, threeTwoThree TEXT UNIQUE, FOREIGN KEY (userId) REFERENCES users (id))");
-db.exec("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
-db.exec("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users (id))");
-db.exec("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER  UNIQUE, FOREIGN KEY (userId) REFERENCES users (id))");
+db.exec("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, FOREIGN KEY (userId) REFERENCES users(id))");
 
 db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
@@ -755,9 +755,14 @@ app.get("/pathways/:id", (req, res) => {
 			});
 		}
 
+		let supervisors = [];
+		let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN supervisors ON supervisorsPathways.supervisorId = supervisors.id INNER JOIN users ON supervisors.userId = users.id");
+		console.log(supervisorsStmt.all());
+
 		res.render("pathway", {
 			pathway: Pathway.getById(pathwayId),
-			cohorts: cohorts
+			cohorts: cohorts,
+			supervisors: supervisors
 		});
 	} catch(e) {
 		console.log(e);
