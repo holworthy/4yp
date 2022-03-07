@@ -29,6 +29,16 @@ body {
 	border-radius: 0.25rem;
 }
 
+main {
+	width: 60%;
+	margin: auto;
+	background-color: #fff;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	margin-top: 1rem;
+	padding: 1rem;
+}
+
 .white {
 	background-color: #fff;
 }
@@ -258,6 +268,9 @@ button {
 	display: inline-block;
 	margin-right: 1rem;
 }
+
+/* users */
+
 
 /* pathways */
 
