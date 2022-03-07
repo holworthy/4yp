@@ -23,7 +23,7 @@ html(lang="en")
 						- let students = cohort.getStudents();
 						- for(let i = 0; i < students.length; i++) {
 						tr
-							td #{students[i].student.user.name}
+							td #{students[i].student.name}
 							td #{students[i].choice1 ? students[i].choice1 : "Not yet picked"}
 							td #{students[i].choice2 ? students[i].choice2 : "Not yet picked"}
 							td #{students[i].choice3 ? students[i].choice3 : "Not yet picked"}

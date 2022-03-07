@@ -37,11 +37,7 @@ app.use(expressFileUpload({
 
 // table definitions
 
-db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT)");
-db.exec("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, campusCardNumber TEXT UNIQUE, threeTwoThree TEXT UNIQUE, FOREIGN KEY (userId) REFERENCES users (id))");
-db.exec("CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, maxNumToSupervise INTEGER, FOREIGN KEY (userId) REFERENCES users(id))");
-db.exec("CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER  UNIQUE, FOREIGN KEY (userId) REFERENCES users (id))");
-db.exec("CREATE TABLE IF NOT EXISTS hubstaff (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER UNIQUE, FOREIGN KEY (userId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
 db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
@@ -49,7 +45,7 @@ db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCRE
 db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markSchemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markSchemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markSchemePartId) REFERENCES markSchemeParts(id))");
 
 db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, approved INTEGER, archived INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
-db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES supervisors(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INTEGER, url TEXT, type TEXT, UNIQUE(projectProposalId, url), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS genres (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsGenres (projectProposalId INTEGER, genreId INTEGER, UNIQUE (projectProposalId, genreId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (genreId) REFERENCES genres(id))");
@@ -60,22 +56,22 @@ db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMEN
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES project(id), FOREIGN KEY (studentId) REFERENCES student(id))");
-db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (supervisorId) REFERENCES supervisors(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id))");
-db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (moderatorId) REFERENCES supervisors(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (supervisorId) REFERENCES users(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (moderatorId) REFERENCES users(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id))");
 
-db.exec("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (studentId) REFERENCES users(id), FOREIGN KEY (choice1) REFERENCES projectProposals(id), FOREIGN KEY (choice2) REFERENCES projectProposals(id), FOREIGN KEY (choice3) REFERENCES projectProposals(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
 db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, code TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS prerequisites (projectProposalId INTEGER, moduleId INTEGER, UNIQUE(projectProposalId, moduleId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (moduleId) REFERENCES modules(id))");
-db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId INTEGER, UNIQUE(studentId, moduleId), FOREIGN KEY (studentId) REFERENCES students(id), FOREIGN KEY (moduleId) REFERENCES modules(id))");
+db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId INTEGER, UNIQUE(studentId, moduleId), FOREIGN KEY (studentId) REFERENCES users(id), FOREIGN KEY (moduleId) REFERENCES modules(id))");
 
-db.exec("CREATE TABLE IF NOT EXISTS supervisorsPathways (supervisorId INTEGER, pathwayId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES supervisors(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS supervisorsPathways (supervisorId INTEGER, pathwayId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash) VALUES ('Bob Bobson', 'Bob', 'bob@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564')");
-db.exec("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
-db.exec("INSERT OR IGNORE INTO admins(userId) VALUES (1)");
-db.exec("INSERT OR IGNORE INTO supervisors(userId, maxNumToSupervise) VALUES (1, 5)");
+// db.exec("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
+// db.exec("INSERT OR IGNORE INTO admins(userId) VALUES (1)");
+// db.exec("INSERT OR IGNORE INTO supervisors(userId, maxNumToSupervise) VALUES (1, 5)");
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
 db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
@@ -96,11 +92,20 @@ db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VA
 // class definitions
 
 class User {
-	constructor(id, name, nickname, email) {
+	constructor(id, name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, maxNumToSupervise, isAdmin, isStudent, isSupervisor, isHubstaff) {
 		this.id = id;
 		this.name = name;
 		this.nickname = nickname;
 		this.email = email;
+		this.salt = salt;
+		this.passwordHash = passwordHash;
+		this.campusCardNumber = campusCardNumber;
+		this.threeTwoThree = threeTwoThree;
+		this.maxNumToSupervise = maxNumToSupervise;
+		this.isAdmin = isAdmin;
+		this.isStudent = isStudent;
+		this.isSupervisor = isSupervisor;
+		this.isHubstaff = isHubstaff;
 	}
 
 	getId() {
@@ -119,98 +124,12 @@ class User {
 		return this.email;
 	}
 
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM users WHERE id = ?");
-		let row = stmt.get(id);
-		return new User(row.id, row.name, row.nickname, row.email);
+	getSalt() {
+		return this.salt;
 	}
 
-	getProfiles() {
-		let supervisor = Supervisor.getByUserId(this.id);
-		let hubstaff = HubStaff.getByUserId(this.id);
-		let student = Student.getByUserId(this.id);
-		let admin = Admin.getByUserId(this.id);
-
-		let profiles = [];
-		if(supervisor)
-			profiles.push(supervisor);
-		if(hubstaff)
-			profiles.push(hubstaff);
-		if(student)
-			profiles.push(student);
-		if(admin)
-			profiles.push(admin);
-		return profiles;
-	}
-}
-
-class Profile {
-	constructor(id, user) {
-		this.id = id;
-		this.user = user;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getUser() {
-		return this.user;
-	}
-}
-
-class Supervisor extends Profile {
-	constructor(id, user, maxNumToSupervise) {
-		super(id, user);
-		this.maxNumToSupervise = maxNumToSupervise;
-	}
-
-	getMaxNumToSupervise() {
-		return this.maxNumToSupervise;
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM supervisors WHERE id = ?");
-		let row1 = stmt.get(id);
-
-		let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?");
-		let row2 = stmt2.get(row1.userId);
-		return new Supervisor(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email), row1.maxNumToSupervise);
-	}
-
-	static getByUserId(userId) {
-		let stmt = db.prepare("SELECT * FROM supervisors WHERE userId = ?");
-		let row = stmt.get(userId);
-		return row ? this.getById(row.id) : null;
-	}
-}
-
-class HubStaff extends Profile {
-	constructor(id, user) {
-		super(id, user);
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM hubstaff WHERE id = ?");
-		let row1 = stmt.get(id);
-
-		let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?");
-		let row2 = stmt2.get(row1.userId);
-		return new HubStaff(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email));
-	}
-
-	static getByUserId(userId) {
-		let stmt = db.prepare("SELECT * FROM hubstaff WHERE userId = ?");
-		let row = stmt.get(userId);
-		return row ? this.getById(row.id) : null;
-	}
-}
-
-class Student extends Profile {
-	constructor(id, user, campusCardNumber, threeTwoThree) {
-		super(id, user);
-		this.campusCardNumber = campusCardNumber;
-		this.threeTwoThree = threeTwoThree;
+	getPasswordHash() {
+		return this.passwordHash;
 	}
 
 	getCampusCardNumber() {
@@ -221,40 +140,30 @@ class Student extends Profile {
 		return this.threeTwoThree;
 	}
 
+	getMaxNumToSupervise() {
+		return this.maxNumToSupervise;
+	}
+
+	getIsAdmin() {
+		return this.isAdmin;
+	}
+
+	getIsStudent() {
+		return this.isStudent;
+	}
+
+	getIsSupervisor() {
+		return this.isSupervisor;
+	}
+
+	getIsHubstaff() {
+		return this.isHubstaff;
+	}
+	
 	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM students WHERE id = ?");
-		let row1 = stmt.get(id);
-
-		let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?");
-		let row2 = stmt2.get(row1.userId);
-		return new Student(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email), row1.campusCardNumber, row1.threeTwoThree);
-	}
-
-	static getByUserId(userId) {
-		let stmt = db.prepare("SELECT * FROM students WHERE userId = ?");
-		let row = stmt.get(userId);
-		return row ? this.getById(row.id) : null;
-	}
-}
-
-class Admin extends Profile {
-	constructor(id, user) {
-		super(id, user);
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM admins WHERE id = ?");
-		let row1 = stmt.get(id);
-
-		let stmt2 = db.prepare("SELECT * FROM users WHERE id = ?");
-		let row2 = stmt2.get(row1.userId);
-		return new Admin(row1.id, new User(row2.id, row2.name, row2.nickname, row2.email));
-	}
-
-	static getByUserId(userId) {
-		let stmt = db.prepare("SELECT * FROM admins WHERE userId = ?");
-		let row = stmt.get(userId);
-		return row ? this.getById(row.id) : null;
+		let stmt = db.prepare("SELECT * FROM users WHERE id = ?");
+		let row = stmt.get(id);
+		return new User(row.id, row.name, row.nickname, row.email, row.salt, row.passwordHash, row.campusCardNumber, row.threeTwoThree, row.maxNumToSupervise, row.isAdmin, row.isStudent, row.isSupervisor, row.isHubstaff);
 	}
 }
 
@@ -373,7 +282,7 @@ class Cohort {
 		let students = [];
 		let rows = stmt.all(this.id);
 		for(let i = 0; i < rows.length; i++)
-			students.push(new CohortStudent(rows[i].cohortId, Student.getById(rows[i].studentId), rows[i].choice1, rows[i].choice2, rows[i].choice3, rows[i].doneChoosing, Project.getById(rows[i].projectId), rows[i].deferring, null));
+			students.push(new CohortStudent(rows[i].cohortId, User.getById(rows[i].studentId), rows[i].choice1, rows[i].choice2, rows[i].choice3, rows[i].doneChoosing, Project.getById(rows[i].projectId), rows[i].deferring, null));
 		return students;
 	}
 
@@ -520,7 +429,7 @@ class ProjectProposal {
 		let projectProposal = new ProjectProposal(row1.id, row1.title, row1.description, row1.approved, row1.archived, MarkScheme.getById(row1.markSchemeId));
 
 		let stmt2 = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ?");
-		stmt2.all(row1.id).forEach(row => projectProposal.supervisors.push(Supervisor.getById(row.supervisorId)));
+		stmt2.all(row1.id).forEach(row => projectProposal.supervisors.push(User.getById(row.supervisorId)));
 
 		let stmt3 = db.prepare("SELECT * FROM projectProposalsGenres WHERE projectProposalId = ?");
 		stmt3.all(row1.id).forEach(row => projectProposal.genres.push(Genre.getById(row.genreId)));
@@ -582,7 +491,7 @@ app.get("/logout", (req, res) => {
 app.get("/users", (req, res) => res.send("users"));
 app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.userId : "/"));
 app.get("/users/:id", (req, res) => {
-	let stmt = db.prepare("SELECT * FROM users INNER JOIN students ON users.id = students.userId INNER JOIN cohortsStudents ON cohortsStudents.studentId = students.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?")
+	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?")
 
 
 	res.render("user", {
@@ -657,7 +566,7 @@ app.get("/api/student-search", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT students.id, userId, name, email FROM students INNER JOIN users ON students.userId = users.id WHERE users.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
+		let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
 });
@@ -735,7 +644,7 @@ app.get("/pathways/:id", (req, res) => {
 	try {
 
 		let cohorts = [];
-		let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN students ON cohortsStudents.studentId = students.id INNER JOIN users ON students.userId = users.id WHERE pathwayId = ?");
+		let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN users ON cohortsStudents.studentId = users.id WHERE pathwayId = ?");
 		let rows = stmt.all(pathwayId);
 		for(let i = 0; i < rows.length; i++) {
 			let row = rows[i];
@@ -774,7 +683,7 @@ app.get("/pathways/:id", (req, res) => {
 		}
 
 		let supervisors = [];
-		let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN supervisors ON supervisorsPathways.supervisorId = supervisors.id INNER JOIN users ON supervisors.userId = users.id");
+		let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN users ON supervisorsPathways.supervisorId = users.id");
 		console.log(supervisorsStmt.all());
 
 		res.render("pathway", {
