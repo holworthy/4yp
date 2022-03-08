@@ -240,6 +240,7 @@ input {
 	padding: 0.5rem;
 	border: 1px solid #ccc;
 	border-radius: 0.25rem;
+	font-size: 1rem;
 }
 
 .flex {
@@ -310,4 +311,27 @@ button {
 
 .pathway-cohort-student {
 
+}
+
+/* projectproposals */
+
+textarea {
+	display: block;
+	width: 100%;
+	resize: vertical;
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	font-size: 1rem;
+}
+
+label {
+	display: block;
+	margin-top: 1rem;
+	
+}
+
+progress {
+	width: 100%;
+	padding: 1rem;
 }

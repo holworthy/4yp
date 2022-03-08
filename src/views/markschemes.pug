@@ -8,11 +8,11 @@ html(lang="en")
 			h1.m1-bottom Markschemes
 			.markschemes
 				- for(let i = 0; i < markschemes.length; i++)
-						a.markscheme(href="/markscheme/"+markschemes[i].id)
+						a.markscheme(href="/markschemes/"+markschemes[i].id)
 							h2 #{markschemes[i].name}
 							p Created by ?
 				- if(markschemes.length == 0)
 					p No markschemes exist yet!
-			a.m1-top(href="/markscheme/new")
+			a.m1-top(href="/markschemes/new")
 				h2 Or Create A New Markscheme 
 			

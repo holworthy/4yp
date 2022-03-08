@@ -44,7 +44,7 @@ db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUT
 db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markSchemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markSchemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markSchemePartId) REFERENCES markSchemeParts(id))");
 
-db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, approved INTEGER, archived INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markSchemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id), FOREIGN KEY (createdBy) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INTEGER, url TEXT, type TEXT, UNIQUE(projectProposalId, url), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS genres (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -68,10 +68,12 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS supervisorsPathways (supervisorId INTEGER, pathwayId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
-db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash) VALUES ('Bob Bobson', 'Bob', 'bob@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564')");
-// db.exec("INSERT OR IGNORE INTO students(userId, campusCardNumber, threeTwoThree) VALUES (1, '100255555', 'abc13xyz')");
-// db.exec("INSERT OR IGNORE INTO admins(userId) VALUES (1)");
-// db.exec("INSERT OR IGNORE INTO supervisors(userId, maxNumToSupervise) VALUES (1, 5)");
+// db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, maxNumToSupervise, isAdmin, isStudent, isSupervisor, isHubstaff) VALUES ()");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Sammy Student', 'Sammy', 'sammy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100000000', 'abc12xyz', 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Simon Supervisor', 'Simon', 'simon@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
+
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
 db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
@@ -444,6 +446,11 @@ class ProjectProposal {
 
 // web server
 
+app.use((req, res, next) => {
+	console.log(new Date(), req.path);
+	next();
+});
+
 app.get("/", (req, res) => {
 	if(req.session.loggedIn)
 		res.redirect("/overview");
@@ -474,6 +481,7 @@ app.post("/login", (req, res) => {
 		if(sha256(row.salt + password) == row.passwordHash) {
 			req.session.loggedIn = true;
 			req.session.userId = row.id;
+			req.session.user = row;
 			req.session.save();
 			res.redirect("/overview");
 		} else {
@@ -491,8 +499,7 @@ app.get("/logout", (req, res) => {
 app.get("/users", (req, res) => res.send("users"));
 app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.userId : "/"));
 app.get("/users/:id", (req, res) => {
-	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?")
-
+	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
 
 	res.render("user", {
 		user: User.getById(req.params.id),
@@ -697,9 +704,60 @@ app.get("/pathways/:id", (req, res) => {
 	}
 });
 
-app.get("/markscheme", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));
-app.get("/markscheme/new", (req, res) => res.render("markschemes-new"));
-app.post("/api/markscheme/new", (req, res) => {
+app.get("/projectproposals", (req, res) => {
+	res.render("projectproposals", {
+		projectProposals: []
+	});
+});
+app.get("/projectproposals/new", (req, res) => {
+	res.render("projectproposals-new");
+});
+app.post("/api/projectproposals/upload", (req, res) => {
+	let title = req.body.title;
+	let description = req.body.description;
+
+	let media = req.files ? req.files.media ? req.files.media : [] : [];
+	let mediaUrls = [];
+	for(let i = 0; i < media.length; i++) {
+		let file = media[i];
+		// console.log(file);
+		if(file.truncated) {
+			// TODO: file too big!
+		} else {
+			let name = file.md5 + "." + mime.extension(file.mimetype)
+			file.mv("./uploads/" + name);
+			mediaUrls.push("/uploads/" + name);
+		}
+	}
+
+	let stmt1 = db.prepare("INSERT INTO projectProposals(title, description, createdBy) VALUES (?, ?, ?)");
+	stmt1.run(title, description, req.session.user.id);
+
+	let stmt2 = db.prepare("SELECT id FROM projectProposals WHERE createdBy = ? ORDER BY id DESC LIMIT 1");
+	let projectProposal = stmt2.get(req.session.user.id);
+	
+	for(let i = 0; i < mediaUrls.length; i++) {
+		let stmt3 = db.prepare("INSERT INTO projectProposalsMedia(projectProposalId, url, type) VALUES (?, ?, ?)");
+		stmt3.run(projectProposal.id, mediaUrls[i], mime.lookup(mediaUrls[i]).split("/")[0]);
+	}
+	let urls = req.body.urls.split(",");
+	for(let i = 0; i < urls.length; i++) {
+		let stmt4 = db.prepare("INSERT INTO projectProposalsMedia(projectProposalId, url, type) VALUES (?, ?, 'url')");
+		stmt4.run(projectProposal.id, urls[i]);
+	}
+
+	let stmt5 = db.prepare("INSERT INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (?, ?)");
+	stmt5.run(projectProposal.id, req.session.user.id);
+
+	res.send(JSON.stringify(projectProposal.id));
+});
+app.get("/projectproposals/:id", (req, res) => {
+	res.render("projectproposal");
+});
+
+app.get("/markschemes", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));
+app.get("/markschemes/new", (req, res) => res.render("markschemes-new"));
+app.post("/api/markschemes/new", (req, res) => {
 	let name = req.body.name;
 	let parts = req.body.parts;
 
@@ -721,7 +779,7 @@ app.post("/api/markscheme/new", (req, res) => {
 		markSchemeId: markSchemeId
 	}));
 });
-app.get("/markscheme/:id", (req, res) => {
+app.get("/markschemes/:id", (req, res) => {
 	let markScheme = MarkScheme.getById(req.params.id);
 	res.render("markscheme", {markScheme: markScheme});
 });
