@@ -12,13 +12,15 @@ let mime = require("mime-types");
 let app = express();
 let db = betterSqlite3("database.db");
 
+let cacheAge = 1000 * 60 * 60 * 24 * 7;
+
 app.use(bodyParser.urlencoded({
 	extended: false
 }));
 app.use(bodyParser.json());
-app.use("/css", express.static("./css"));
-app.use("/js", express.static("./js"));
-app.use("/fonts", express.static("./fonts"));
+app.use("/css", express.static("./css", {maxAge: cacheAge}));
+app.use("/js", express.static("./js", {maxAge: cacheAge}));
+app.use("/fonts", express.static("./fonts", {maxAge: cacheAge}));
 app.set("view engine", "pug");
 app.use(expressSession({
 	store: new (betterSqlite3SessionStore(expressSession))({
@@ -41,11 +43,11 @@ app.use(expressFileUpload({
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
 db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
+db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markSchemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markSchemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markSchemePartId) REFERENCES markSchemeParts(id))");
 
-db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markSchemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id), FOREIGN KEY (createdBy) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markSchemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id), FOREIGN KEY (createdBy) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INTEGER, url TEXT, type TEXT, UNIQUE(projectProposalId, url), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS genres (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -88,7 +90,8 @@ db.exec("INSERT OR IGNORE INTO genres(name) VALUES ('Genre 1')");
 db.exec("INSERT OR IGNORE INTO genres(name) VALUES ('Genre 2')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId) VALUES (1, 2)");
@@ -462,6 +465,11 @@ class ProjectProposal {
 
 		return projectProposal;
 	}
+
+	static getAll() {
+		let stmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id");
+		return stmt.all();
+	}
 }
 
 
@@ -480,7 +488,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => res.redirect(req.session.loggedIn ? "/overview" : "/login"));
-app.get("/uea.png", (req, res) => res.sendFile("uea.png", {root: "."}));
+app.get("/uea.png", (req, res) => res.sendFile("uea.png", {root: ".", maxAge: cacheAge}));
 app.get("/about", (req, res) => res.render("about"));
 
 app.get("/login", (req, res) => {
@@ -743,7 +751,7 @@ app.get("/pathways/:id", (req, res) => {
 
 app.get("/projectproposals", (req, res) => {
 	res.render("projectproposals", {
-		projectProposals: []
+		projectProposals: ProjectProposal.getAll()
 	});
 });
 app.get("/projectproposals/new", (req, res) => {
@@ -796,7 +804,7 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	res.send(JSON.stringify(projectProposal.id));
 });
 app.get("/projectproposals/:id", (req, res) => {
-	res.render("projectproposal");
+	res.render("projectproposal", {projectProposal: ProjectProposal.getById(req.params.id)});
 });
 
 app.get("/markschemes", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));

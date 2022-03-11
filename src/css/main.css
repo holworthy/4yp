@@ -347,3 +347,31 @@ progress {
 	width: 100%;
 	padding: 1rem;
 }
+
+.projectproposals {
+	margin-top: 1rem;
+}
+
+.projectproposal {
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	padding: 1rem;
+	margin-bottom: 1rem;
+}
+
+.projectproposal:last-child {
+	margin-bottom: 0;
+}
+
+.projectproposal a {
+	text-decoration: none;
+}
+
+.projectproposal .created-by {
+	margin-top: 1rem;
+}
+
+.projectproposal .created-by a {
+	display: inline;
+	font-weight: bold;
+}

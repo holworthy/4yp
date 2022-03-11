@@ -6,4 +6,17 @@ html(lang="en")
 		include includes/header.pug
 		main
 			h2 Project Proposals
-			
+			div.projectproposals
+				each projectProposal in projectProposals
+					.projectproposal
+						a(href="/projectproposals/"+projectProposal.id)
+							h3 #{projectProposal.title}
+						p #{projectProposal.description}
+						- if(projectProposal.createdBy == null) {
+							p.created-by Created By Anonymous
+						- } else {
+							p.created-by Created By 
+								a(href="/users/"+projectProposal.createdBy) #{projectProposal.createdByName}
+						- }
+
+						
