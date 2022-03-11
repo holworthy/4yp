@@ -74,8 +74,16 @@ db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash) 
 // db.exec("INSERT OR IGNORE INTO supervisors(userId, maxNumToSupervise) VALUES (1, 5)");
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
+// db.exec("UPDATE OR IGNORE cohortsStudents SET doneChoosing = 1 WHERE studentId = 2");
+
+db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
+
 db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
 db.exec("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES ('Amazingness', 100.0, 1)");
+
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
 
 db.exec("INSERT OR IGNORE INTO genres(name) VALUES ('Genre 1')");
 db.exec("INSERT OR IGNORE INTO genres(name) VALUES ('Genre 2')");
@@ -727,7 +735,21 @@ app.get("/markscheme/:id", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	res.render("overview", {user: User.getById(req.session.userId)});
+	if (User.getById(req.session.userId).getIsStudent()){
+		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+		let row1 = stmt1.get(req.session.userId);
+		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
+		if (cS.doneChoosing){
+			res.render("studentoverview", {user: User.getById(req.session.userId)});
+		}
+		else{
+			res.redirect("/pathways");
+		}
+		
+	}
+	else {
+		res.render("overview", {user: User.getById(req.session.userId)});
+	}
 });
 
 
