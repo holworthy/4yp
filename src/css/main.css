@@ -272,8 +272,31 @@ input {
 	flex-direction: row;
 }
 
+.flex-col {
+	flex-direction: column;
+}
+
 .flex-1 {
 	flex: 1;
+}
+
+.flex-col-centre {
+	
+	align-self: center;
+}
+
+.flex_centre {
+	justify-content: space-evenly;
+}
+
+.flex_space {
+	align-content: space-evenly;
+}
+
+.square_quarter_button {
+	display: inline-block;
+	height: 3rem;
+	width: 20%;
 }
 
 button {
