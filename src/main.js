@@ -106,6 +106,9 @@ db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
 
+db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
+db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
+db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Web-Based Programming', 'CMP-4011A')");
 
 // class definitions
 
@@ -483,10 +486,12 @@ class ProjectProposal {
 
 // web server
 
+// log page in console
 app.use((req, res, next) => {
 	console.log(new Date(), req.path);
 	next();
 });
+
 // remove trailing slashes from urls
 app.use((req, res, next) => {
 	if(req.path.endsWith("/") && req.path != "/")
@@ -495,10 +500,16 @@ app.use((req, res, next) => {
 		next();
 });
 
+// root
 app.get("/", (req, res) => res.redirect(req.session.loggedIn ? "/overview" : "/login"));
+
+// favicon
 app.get("/uea.png", (req, res) => res.sendFile("uea.png", {root: ".", maxAge: cacheAge}));
+
+// about page
 app.get("/about", (req, res) => res.render("about"));
 
+// login page
 app.get("/login", (req, res) => {
 	if(req.session.loggedIn)
 		res.redirect("/overview");
@@ -535,12 +546,14 @@ app.use((req, res, next) => {
 		res.redirect("/");
 });
 
+// logout page
 app.get("/logout", (req, res) => {
 	req.session.loggedIn = false;
 	req.session.save();
 	res.redirect("/");
 });
 
+// users
 app.get("/users", (req, res) => res.render("users", {
 	users: User.getAll()
 }));
@@ -842,6 +855,30 @@ app.post("/api/markschemes/new", (req, res) => {
 app.get("/markschemes/:id", (req, res) => {
 	let markScheme = MarkScheme.getById(req.params.id);
 	res.render("markscheme", {markScheme: markScheme});
+});
+
+// modules
+app.get("/modules", (req, res) => {
+	let stmt = db.prepare("SELECT * FROM modules");
+	let rows = stmt.all();
+	res.render("modules", {modules: rows});
+});
+app.get("/modules/new", (req, res) => {
+	res.render("modules-new");
+});
+app.post("/modules/new", (req, res) => {
+	let name = req.body.name;
+	let code = req.body.code;
+
+	let stmt = db.prepare("INSERT INTO modules(name, code) VALUES (?, ?)");
+	let result = stmt.run(name, code);
+
+	res.redirect("/modules/" + result.lastInsertRowid);
+});
+app.get("/modules/:moduleId", (req, res) => {
+	let stmt = db.prepare("SELECT * FROM modules WHERE id = ?");
+	let row = stmt.get(req.params.moduleId);
+	res.render("module", {mod: row});
 });
 
 app.get("/overview", (req, res) => {

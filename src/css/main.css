@@ -398,3 +398,12 @@ progress {
 	display: inline;
 	font-weight: bold;
 }
+
+/* modules */
+
+.module {
+	margin-top: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
+	padding: 1rem;
+}

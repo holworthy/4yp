@@ -1,0 +1,15 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Modules
+			.modules
+				each m in modules
+					.module
+						p #{m.name}
+						p #{m.code}
+				if modules.length == 0
+					p No Modules Yet
