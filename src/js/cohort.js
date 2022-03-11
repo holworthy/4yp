@@ -21,7 +21,7 @@ window.addEventListener("load", () => {
 				button.innerText = "Add to cohort";
 				button.addEventListener("click", () => {
 					let xhr2 = new XMLHttpRequest();
-					xhr2.open("GET", "/api/add-student-to-cohort?cohortId=" + location.pathname.substring(8) + "&studentId=" + students[i].id);
+					xhr2.open("GET", "/api/add-student-to-cohort?cohortId=" + location.pathname.substring(9) + "&studentId=" + students[i].id);
 					xhr2.send();
 
 					console.log();

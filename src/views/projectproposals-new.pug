@@ -32,8 +32,20 @@ html(lang="en")
 										input#url-input
 									td
 										button#add-url-button(type="button") Add URL
-
-								
+					div
+						label Pathways
+						table
+							thead
+								tr
+									th Pathway
+									th Included
+							tbody
+								- for(let i = 0; i < pathways.length; i++) {
+								tr
+									td #{pathways[i].name}
+									td
+										input(type="checkbox", class="pathway-checkbox" name="pathway-checkbox-" + pathways[i].id)
+								- }
 
 				button#create-button.m1-top(type="button") Create
 				progress#progress-bar(value="0")

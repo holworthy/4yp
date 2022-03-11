@@ -6,6 +6,7 @@ window.addEventListener("load", () => {
 	let urlsTbody = document.getElementById("urls-tbody");
 	let urlInput = document.getElementById("url-input");
 	let addUrlButton = document.getElementById("add-url-button");
+	let pathwayCheckboxes = document.getElementsByClassName("pathway-checkbox");
 	let urls = [];
 
 	addUrlButton.addEventListener("click", e => {
@@ -44,7 +45,13 @@ window.addEventListener("load", () => {
 
 		progressBar.removeAttribute("value");
 		let fd = new FormData(form);
-		fd.append("urls", urls.join(","));		
+		fd.append("urls", urls.join(","));
+
+		let pathways = [];
+		for(let i = 0; i < pathwayCheckboxes.length; i++)
+			if(pathwayCheckboxes[i].checked)
+				pathways.push(pathwayCheckboxes[i].name.substring(17));
+		fd.append("pathways", pathways.join(","));
 
 		let xhr = new XMLHttpRequest();
 		xhr.addEventListener("load", e => {

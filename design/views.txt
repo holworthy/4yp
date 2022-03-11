@@ -12,9 +12,9 @@ views for supervisors:
 	/selectpathways
 
 	/cohorts
-	/cohort/new
-	/cohort/archived
-	/cohort/:id
+	/cohorts/new
+	/cohorts/archived
+	/cohorts/:id
 
 	/myprojectproposals
 	/projectproposal/new

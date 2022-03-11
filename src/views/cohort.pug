@@ -15,10 +15,12 @@ html(lang="en")
 							th Choice 1
 							th Choice 2
 							th Choice 3
+							th Assigned Choice
 							th Done Choosing
 							th Project
 							th Deferring
 							th Pathway
+							th Remove
 					tbody
 						- let students = cohort.getStudents();
 						- for(let i = 0; i < students.length; i++) {
@@ -27,10 +29,14 @@ html(lang="en")
 							td #{students[i].choice1 ? students[i].choice1 : "Not yet picked"}
 							td #{students[i].choice2 ? students[i].choice2 : "Not yet picked"}
 							td #{students[i].choice3 ? students[i].choice3 : "Not yet picked"}
+							td
+								a(href="/cohorts/" + cohort.id + "/students/" + students[i].student.id) Manually Assign 
 							td #{students[i].doneChoosing ? "Yes" : "No"}
 							td #{students[i].project ? students[i].project : "Not yet created"}
 							td #{students[i].deferring ? "Yes" : "No"}
 							td #{students[i].pathway}
+							td
+								button Remove
 						- }
 
 						- if(students.length == 0) {
