@@ -882,19 +882,16 @@ app.get("/modules/:moduleId", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	if (User.getById(req.session.userId).getIsStudent()){
+	if(User.getById(req.session.userId).getIsStudent()) {
 		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 		let row1 = stmt1.get(req.session.userId);
 		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
-		if (cS.doneChoosing){
+		if(row1.doneChoosing) {
 			res.render("studentoverview", {user: User.getById(req.session.userId)});
-		}
-		else{
+		} else {
 			res.redirect("/pathways");
 		}
-		
-	}
-	else {
+	} else {
 		res.render("overview", {user: User.getById(req.session.userId)});
 	}
 });
