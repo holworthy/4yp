@@ -10,34 +10,7 @@ let expressFileUpload = require("express-fileupload");
 let mime = require("mime-types");
 let jsStringify = require("js-stringify");
 
-let app = express();
 let db = betterSqlite3("database.db");
-
-let cacheAge = 1000 * 60 * 60 * 24 * 7;
-
-app.use(bodyParser.urlencoded({
-	extended: false
-}));
-app.use(bodyParser.json());
-app.use("/css", express.static("./css", {maxAge: cacheAge}));
-app.use("/js", express.static("./js", {maxAge: cacheAge}));
-app.use("/fonts", express.static("./fonts", {maxAge: cacheAge}));
-app.set("view engine", "pug");
-app.use(expressSession({
-	store: new (betterSqlite3SessionStore(expressSession))({
-		client: db
-	}),
-	secret: "hereisasecret",
-	resave: false,
-	saveUninitialized: false
-}));
-app.use(expressFileUpload({
-	createParentPath: true,
-	useTempFiles: true,
-	limits: {
-		fileSize: 50 * (1 << 20)
-	}
-}));
 
 // table definitions
 
@@ -108,6 +81,8 @@ db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId
 db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId) VALUES (1, 2)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (2, 2)");
 
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
@@ -218,6 +193,9 @@ class MarkScheme {
 	static getById(id) {
 		let stmt1 = db.prepare("SELECT * FROM markSchemes WHERE id = ?");
 		let row1 = stmt1.get(id);
+
+		if(!row1)
+			return null;
 		
 		let markScheme = new MarkScheme(row1.id, row1.name);
 		let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
@@ -512,6 +490,33 @@ class ProjectProposal {
 
 // web server
 
+let app = express();
+let cacheAge = 1000 * 60 * 60 * 24 * 7;
+
+app.use(bodyParser.urlencoded({
+	extended: false
+}));
+app.use(bodyParser.json());
+app.use("/css", express.static("./css", {maxAge: cacheAge}));
+app.use("/js", express.static("./js", {maxAge: cacheAge}));
+app.use("/fonts", express.static("./fonts", {maxAge: cacheAge}));
+app.set("view engine", "pug");
+app.use(expressSession({
+	store: new (betterSqlite3SessionStore(expressSession))({
+		client: db
+	}),
+	secret: "hereisasecret",
+	resave: false,
+	saveUninitialized: false
+}));
+app.use(expressFileUpload({
+	createParentPath: true,
+	useTempFiles: true,
+	limits: {
+		fileSize: 50 * (1 << 20)
+	}
+}));
+
 // log page in console
 app.use((req, res, next) => {
 	console.log(new Date(), req.path);
@@ -554,7 +559,6 @@ app.post("/login", (req, res) => {
 	} else {
 		if(sha256(row.salt + password) == row.passwordHash) {
 			req.session.loggedIn = true;
-			req.session.userId = row.id;
 			req.session.user = row;
 			req.session.save();
 			res.redirect("/overview");
@@ -583,7 +587,7 @@ app.get("/logout", (req, res) => {
 app.get("/users", (req, res) => res.render("users", {
 	users: User.getAll()
 }));
-app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.userId : "/"));
+app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.user.id : "/"));
 app.get("/users/:id", (req, res) => {
 	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
 	try {
@@ -709,7 +713,6 @@ app.post("/projectproposal/new", (req, res) => {
 });
 
 
-app.get("/projectproposal/:id", (req, res) => res.send("projectproposal " + req.params.id));
 app.get("/mystudentprojects", (req, res) => res.send("mystudentprojects"));
 app.get("/project/:id", (req, res) => res.send("project " + req.params.id));
 app.get("/marking", (req, res) => res.send("/marking"));
@@ -741,7 +744,9 @@ app.post("/pathways/new", (req, res) => {
 app.get("/pathways/:id", (req, res) => {
 	let pathwayId = req.params.id;
 	try {
-
+		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
+		let projectProposals = projectProposalsStmt.all(pathwayId);
+		
 		let cohorts = [];
 		let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN users ON cohortsStudents.studentId = users.id WHERE pathwayId = ?");
 		let rows = stmt.all(pathwayId);
@@ -787,6 +792,7 @@ app.get("/pathways/:id", (req, res) => {
 
 		res.render("pathway", {
 			pathway: Pathway.getById(pathwayId),
+			projectProposals: projectProposals,
 			cohorts: cohorts,
 			supervisors: supervisors
 		});
@@ -797,8 +803,14 @@ app.get("/pathways/:id", (req, res) => {
 });
 
 app.get("/projectproposals", (req, res) => {
+	let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id");
+	let unapprovedProjectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id WHERE approved = 0");
+	let approvedProjectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id WHERE approved = 1");
 	res.render("projectproposals", {
-		projectProposals: ProjectProposal.getAll()
+		user: req.session.user,
+		projectProposals: projectProposalsStmt.all(),
+		unapprovedProjectProposals: unapprovedProjectProposalsStmt.all(),
+		approvedProjectProposals: approvedProjectProposalsStmt.all()
 	});
 });
 app.get("/projectproposals/new", (req, res) => {
@@ -852,6 +864,15 @@ app.post("/api/projectproposals/upload", (req, res) => {
 });
 app.get("/projectproposals/:id", (req, res) => {
 	res.render("projectproposal", {projectProposal: ProjectProposal.getById(req.params.id)});
+});
+app.get("/api/projectproposals/:projectProposalId/approve", (req, res) => {
+	try {
+		let stmt = db.prepare("UPDATE projectProposals SET approved = 1 WHERE id = ?");
+		stmt.run(req.params.projectProposalId);
+		res.send("true");
+	} catch(e) {
+		res.send("false");
+	}
 });
 
 app.get("/markschemes", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));
@@ -908,7 +929,8 @@ app.get("/modules/:moduleId", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	if (User.getById(req.session.userId).getIsStudent()){
+	if(req.session)
+	if(User.getById(req.session.user.id).getIsStudent()) {
 		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 		let row1 = stmt1.get(req.session.userId);
 		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
@@ -918,10 +940,12 @@ app.get("/overview", (req, res) => {
 		else{
 			res.redirect("/pathways");
 		}
-		
-	}
-	else {
-		res.render("overview", {user: User.getById(req.session.userId)});
+	} else {
+		// TODO: fix cohorts
+		res.render("overview", {
+			user: User.getById(req.session.user.id),
+			cohorts: []
+		});
 	}
 });
 app.post("/overview", (req, res) => {

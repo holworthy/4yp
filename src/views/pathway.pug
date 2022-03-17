@@ -5,15 +5,30 @@ html(lang="en")
 		script(src="/js/pathway.js") 
 	body
 		include includes/header.pug
-		.container.m1-top.p1
+		main
 			h2 #{pathway.name}
 			div
-				div
-					h3 See what projects are in this pathway
-					div
-						p Nothing here
-				div
-					h3.m1-bottom See what students are in this pathway
+				details(open)
+					summary
+						h3 See what project proposals are in this pathway
+					table
+						thead
+							tr
+								th Title
+								th Created By
+						tbody
+							each projectProposal in projectProposals
+								tr
+									td
+										a(href="/projectproposals/" + projectProposal.id)  #{projectProposal.title}
+									td
+										if projectProposal.createdBy
+											a(href="/users/" + projectProposal.createdBy) #{projectProposal.createdByName}
+										else
+											| Anonymous
+				details(open)
+					summary
+						h3.m1-bottom See what students are in this pathway
 					.pathway-cohorts
 						- for(let i = 0; i < cohorts.length; i++) {
 						details.pathway-cohort
@@ -35,7 +50,13 @@ html(lang="en")
 											a(href="/students/" + cohorts[i].students[j].id) Go To Student
 								- }
 						- }
-				div
-					h3 See what moderators moderate this pathway
+				details(open)
+					summary
+						h3 See who moderates this pathway
 					div
-						p Nothing here
+						if supervisors.length > 0
+							div
+								for supervisor in supervisors
+									p #{JSON.stringify(supervisor)}
+						else
+							p No one is moderating this pathway yet!

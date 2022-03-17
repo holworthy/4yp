@@ -2,10 +2,13 @@ doctype html
 html(lang="en")
 	head
 		include includes/head.pug
+		script(src="/js/projectproposal.js") 
 	body
 		include includes/header.pug
 		main
 			h2 #{projectProposal.title}
 			p #{projectProposal.description}
 
-			//- TODO: need to add data from the other tables, and add an edit button
+			div
+				if !projectProposal.approved
+					button#approve-button(data-project-proposal-id = projectProposal.id) Approve Project
