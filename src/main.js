@@ -84,7 +84,7 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
-// db.exec("UPDATE OR IGNORE cohortsStudents SET doneChoosing = 1 WHERE studentId = 2");
+db.exec("UPDATE OR IGNORE cohortsStudents SET doneChoosing = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 
@@ -105,6 +105,8 @@ db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId
 db.exec("INSERT OR IGNORE INTO projectProposalsGenres(projectProposalId, genreId) VALUES (1, 2)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (2, 2)");
 
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
@@ -215,6 +217,9 @@ class MarkScheme {
 	static getById(id) {
 		let stmt1 = db.prepare("SELECT * FROM markSchemes WHERE id = ?");
 		let row1 = stmt1.get(id);
+
+		if(!row1)
+			return null;
 		
 		let markScheme = new MarkScheme(row1.id, row1.name);
 		let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
@@ -528,7 +533,6 @@ app.post("/login", (req, res) => {
 	} else {
 		if(sha256(row.salt + password) == row.passwordHash) {
 			req.session.loggedIn = true;
-			req.session.userId = row.id;
 			req.session.user = row;
 			req.session.save();
 			res.redirect("/overview");
@@ -557,7 +561,7 @@ app.get("/logout", (req, res) => {
 app.get("/users", (req, res) => res.render("users", {
 	users: User.getAll()
 }));
-app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.userId : "/"));
+app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.user.id : "/"));
 app.get("/users/:id", (req, res) => {
 	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
 	try {
@@ -715,7 +719,9 @@ app.post("/pathways/new", (req, res) => {
 app.get("/pathways/:id", (req, res) => {
 	let pathwayId = req.params.id;
 	try {
-
+		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
+		let projectProposals = projectProposalsStmt.all(pathwayId);
+		
 		let cohorts = [];
 		let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN users ON cohortsStudents.studentId = users.id WHERE pathwayId = ?");
 		let rows = stmt.all(pathwayId);
@@ -761,6 +767,7 @@ app.get("/pathways/:id", (req, res) => {
 
 		res.render("pathway", {
 			pathway: Pathway.getById(pathwayId),
+			projectProposals: projectProposals,
 			cohorts: cohorts,
 			supervisors: supervisors
 		});
@@ -885,8 +892,8 @@ app.get("/overview", (req, res) => {
 	if(User.getById(req.session.userId).getIsStudent()) {
 		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 		let row1 = stmt1.get(req.session.userId);
-		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
-		if(row1.doneChoosing) {
+		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice,  row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
+		if (cS.getDoneChoosing()){
 			res.render("studentoverview", {user: User.getById(req.session.userId)});
 		} else {
 			res.redirect("/pathways");

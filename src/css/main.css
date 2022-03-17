@@ -229,7 +229,7 @@ form label {
 	color: #000;
 }
 
-div a {
+a {
 	display: block;
 	text-decoration: underline;
 	color: #000;
@@ -317,6 +317,10 @@ button {
 
 
 /* pathways */
+
+summary h3 {
+	display: inline;
+}
 
 .pathway {
 	width: 100%;

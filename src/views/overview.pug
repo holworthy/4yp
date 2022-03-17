@@ -4,28 +4,36 @@ html(lang="en")
 		include includes/head.pug
 	body 
 		include includes/header.pug
-		.container.white.bordered.p1.m1-top
+		main
 			h2 Hello, #{user.nickname}
 			p Things you can do:
 
-			h3 Admin Things
-			a(href="/users") View all users
-			a(href="/users/me") View yourself  
-			a.m1-top(href="/pathways") View pathways
-			a(href="/pathways/new") Create a pathway
-			a.m1-top(href="/cohorts") View cohorts
-			a(href="/cohorts/new") Create a cohort
-			a.m1-top(href="/projectproposals") View project proposals
-			a(href="#") Approve project proposals
-			a.m1-top(href="/markschemes") View Markschemes
-			a(href="/markschemes/new") Create a markscheme
-			a.m1-top(href="/modules") View modules
-			a(href="/modules/new") Create a module 
+			div
+				h3 Admin Things
+				a(href="/users") View all users
+				a(href="/users/me") View yourself  
+				a.m1-top(href="/pathways") View pathways
+				a(href="/pathways/new") Create a pathway
+				a.m1-top(href="/cohorts") View cohorts
+				a(href="/cohorts/new") Create a cohort
+				a.m1-top(href="/projectproposals") View project proposals
+				a(href="#") Approve project proposals
+				a.m1-top(href="/markschemes") View Markschemes
+				a(href="/markschemes/new") Create a markscheme
+				a.m1-top(href="/modules") View modules
+				a(href="/modules/new") Create a module 
 
-			h3 Student Things
-			a(href="/projectproposals") Select a project
+			div
+				h3 Student Things
+				a(href="/projectproposals") Select a project
+				h4 My Cohorts
+				each cohort in cohorts
+					div
+						a(href="/cohorts/" + cohort.id) #{cohort.name}
 
-			h3 Supervisor Things
-			a(href="/projectproposals/new") Create a project proposal 
+			div
+				h3 Supervisor Things
+				a(href="/projectproposals/new") Create a project proposal 
 
-			h3 Hubstaff Things
+			div
+				h3 Hubstaff Things

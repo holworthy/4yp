@@ -3,5 +3,4 @@ package-lock.json
 database.db
 media
 tmp
-views/template.pug
 uploads
