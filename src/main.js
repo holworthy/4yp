@@ -8,6 +8,7 @@ let sha256 = require("sha256");
 let betterSqlite3SessionStore = require("better-sqlite3-session-store");
 let expressFileUpload = require("express-fileupload");
 let mime = require("mime-types");
+let jsStringify = require("js-stringify");
 
 let app = express();
 let db = betterSqlite3("database.db");
@@ -57,7 +58,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTE
 
 db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES project(id), FOREIGN KEY (studentId) REFERENCES student(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (supervisorId) REFERENCES users(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (moderatorId) REFERENCES users(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id))");
@@ -84,7 +85,7 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
-db.exec("UPDATE OR IGNORE cohortsStudents SET doneChoosing = 1 WHERE studentId = 5");
+// db.exec("UPDATE OR IGNORE cohortsStudents SET doneChoosing = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 
@@ -92,7 +93,9 @@ db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
 db.exec("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES ('Amazingness', 100.0, 1)");
 
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
+// db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
+
+// db.exec("UPDATE OR IGNORE cohortsStudents SET projectid = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO genres(name) VALUES ('Genre 1')");
 db.exec("INSERT OR IGNORE INTO genres(name) VALUES ('Genre 2')");
@@ -364,9 +367,11 @@ class Pathway {
 }
 
 class Project {
-	constructor(id, projectProposalId) {
+	constructor(id, projectProposalId, githubLink, overleafLink) {
 		this.id = id;
 		this.projectProposalId = projectProposalId;
+		this.githubLink = githubLink;
+		this.overleafLink = overleafLink;
 	}
 
 	getId() {
@@ -377,10 +382,18 @@ class Project {
 		return this.projectProposalId;
 	}
 
+	getGithubLink() {
+		return this.githubLink;
+	}
+
+	getOverleafLink() {
+		return this.getOverleafLink;
+	}
+
 	static getById(id) {
 		let stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
 		let row = stmt.get(id);
-		return row ? new Cohort(row.id, row.projectProposalId) : null;
+		return row ? new Project(row.id, row.projectProposalId, row.githubLink, row.overleafLink) : null;
 	}
 }
 
@@ -396,6 +409,19 @@ class CohortStudent {
 		this.project = project;
 		this.deferring = deferring;
 		this.pathway = pathway;
+	}
+
+	toConsole(){
+		console.log("Cohort:"+this.cohort+"\n"+
+					"Student:"+this.student+"\n"+
+					"choice1:"+this.choice1+"\n"+
+					"choice2:"+this.choice2+"\n"+
+					"choice3:"+this.choice3+"\n"+
+					"assigned:"+this.assignedChoice+"\n"+
+					"doneChoosing"+this.doneChoosing+"\n"+
+					"project"+this.project+"\n"+
+					"defering"+this.deferring+"\n"+
+					"Pathway"+this.pathway);
 	}
 
 	getCohort() {
@@ -427,7 +453,7 @@ class CohortStudent {
 	}
 
 	getProject() {
-		return this.Project;
+		return this.project;
 	}
 
 	getDeferring() {
@@ -885,9 +911,9 @@ app.get("/overview", (req, res) => {
 	if (User.getById(req.session.userId).getIsStudent()){
 		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 		let row1 = stmt1.get(req.session.userId);
-		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice,  row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
+		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
 		if (cS.getDoneChoosing()){
-			res.render("studentoverview", {user: User.getById(req.session.userId)});
+			res.render("studentoverview", {user: User.getById(req.session.userId), project: Project.getById(cS.getProject())});
 		}
 		else{
 			res.redirect("/pathways");
@@ -897,6 +923,18 @@ app.get("/overview", (req, res) => {
 	else {
 		res.render("overview", {user: User.getById(req.session.userId)});
 	}
+});
+app.post("/overview", (req, res) => {
+	if (User.getById(req.session.userId).getIsStudent()){
+		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+		let row1 = stmt1.get(req.session.userId);
+		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
+		let project = Project.getById(cS.getProject());
+		let stmt2 = db.prepare("UPDATE OR IGNORE projects SET githubLink = ? WHERE id = ?");
+		let gLink = req.body.githubLink
+		stmt2.run(gLink, project.getId());
+	}
+	res.redirect("/overview");
 });
 
 

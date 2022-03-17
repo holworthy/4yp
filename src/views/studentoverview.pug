@@ -2,6 +2,9 @@ doctype html
 html(lang="en")
 	head
 		include includes/head.pug
+		//- script
+		//- 	const data = !{jsStringify(project.githubLink)}
+		script(src="/js/studentOverview.js")
 	body 
 		include includes/header.pug
 		.container.white.bordered.p1.m1-top.flex.flex-row.flex_centre.flex_space
@@ -23,6 +26,10 @@ html(lang="en")
 		.container.white.bordered.p1.m1-top.flex.flex-row.flex_centre.flex_space
 			button.square_quarter_button email supervisor
 			button.square_quarter_button project info
-			button.square_quarter_button github
+			button.square_quarter_button(onclick="github(\"" + project.githubLink + "\")") github
 			button.square_quarter_button overleaf
-			//- add functionality to github and overleaf buttons
+		.container.white.bordered.p1.m1-top(id="githubform", name="githubform", style="display: none;")
+			form.input_flexbox(method="post", enctype="multipart/form-data")
+				input.m1-top(type="text", name="githubLink", Placeholder="https://github.com/")
+				input.login_submit.m1-top(type="submit")
+
