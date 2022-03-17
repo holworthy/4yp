@@ -26,10 +26,14 @@ html(lang="en")
 		.container.white.bordered.p1.m1-top.flex.flex-row.flex_centre.flex_space
 			button.square_quarter_button email supervisor
 			button.square_quarter_button project info
-			button.square_quarter_button(onclick="github(\"" + project.githubLink + "\")") github
-			button.square_quarter_button overleaf
+			button.square_quarter_button(onclick="github("+ (project.githubLink != null ? "\""+project.githubLink+"\"" : project.githubLink) +")") github
+			button.square_quarter_button(onclick="overleaf("+ (project.overleafLink != null ? "\""+project.overleafLink+"\"" : project.overleafLink) +")") overleaf
 		.container.white.bordered.p1.m1-top(id="githubform", name="githubform", style="display: none;")
-			form.input_flexbox(method="post", enctype="multipart/form-data")
-				input.m1-top(type="text", name="githubLink", Placeholder="https://github.com/")
+			form.input_flexbox(method="post", enctype="multipart/form-data", action="/overview/github")
+				input.m1-top(type="text", name="githubLink", Placeholder=(project.githubLink != null ? "\""+project.githubLink+"\"" : "https://github.com/"))
+				input.login_submit.m1-top(type="submit")
+		.container.white.bordered.p1.m1-top(id="overleafForm", name="overleafForm", style="display: none;")
+			form.input_flexbox(method="post", enctype="multipart/form-data", action="/overview/overleaf")
+				input.m1-top(type="text", name="overleafLink", Placeholder=(project.overleafLink != null ? "\""+project.overleafLink+"\"" : "https://www.overleaf.com/"))
 				input.login_submit.m1-top(type="submit")
 

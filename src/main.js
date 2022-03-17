@@ -8,7 +8,6 @@ let sha256 = require("sha256");
 let betterSqlite3SessionStore = require("better-sqlite3-session-store");
 let expressFileUpload = require("express-fileupload");
 let mime = require("mime-types");
-let jsStringify = require("js-stringify");
 
 let db = betterSqlite3("database.db");
 
@@ -929,13 +928,12 @@ app.get("/modules/:moduleId", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	if(req.session)
 	if(User.getById(req.session.user.id).getIsStudent()) {
 		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
-		let row1 = stmt1.get(req.session.userId);
+		let row1 = stmt1.get(parseInt(req.session.user.id));
 		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
 		if (cS.getDoneChoosing()){
-			res.render("studentoverview", {user: User.getById(req.session.userId), project: Project.getById(cS.getProject())});
+			res.render("studentoverview", {user: User.getById(req.session.user.id), project: Project.getById(cS.getProject())});
 		}
 		else{
 			res.redirect("/pathways");
@@ -948,19 +946,28 @@ app.get("/overview", (req, res) => {
 		});
 	}
 });
-app.post("/overview", (req, res) => {
-	if (User.getById(req.session.userId).getIsStudent()){
+app.post("/overview/github", (req, res) => {
+	if (User.getById(req.session.user.id).getIsStudent()){
 		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
-		let row1 = stmt1.get(req.session.userId);
+		let row1 = stmt1.get(req.session.user.id);
 		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
 		let project = Project.getById(cS.getProject());
 		let stmt2 = db.prepare("UPDATE OR IGNORE projects SET githubLink = ? WHERE id = ?");
-		let gLink = req.body.githubLink
-		stmt2.run(gLink, project.getId());
+		stmt2.run(req.body.githubLink, project.getId());
 	}
 	res.redirect("/overview");
 });
-
+app.post("/overview/overleaf", (req, res) => {
+	if (User.getById(req.session.user.id).getIsStudent()){
+		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+		let row1 = stmt1.get(req.session.user.id);
+		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
+		let project = Project.getById(cS.getProject());
+		let stmt2 = db.prepare("UPDATE OR IGNORE projects SET overleafLink = ? WHERE id = ?");
+		stmt2.run(req.body.overleafLink, project.getId());
+	}
+	res.redirect("/overview");
+});
 
 app.use("/media", express.static("./media"));
 

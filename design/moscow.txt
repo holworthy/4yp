@@ -18,7 +18,6 @@ Must:
 	Email all marks to the hub
 		Or allow a downloadable page which contains all the data
 	Allow hub staff/others to change student info
-	Permission tables
 
 Should:
 	Look nice
