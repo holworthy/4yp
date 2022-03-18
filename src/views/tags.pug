@@ -1,0 +1,15 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/tags.js")
+	body
+		include includes/header.pug
+		main
+			h2 Tags
+			.tags
+				each tag in tags
+					.tag
+						p #{tag.name}
+						if user.isAdmin
+							p.delete-tag(onclick="deleteTag("+tag.id+", this)") 🗙

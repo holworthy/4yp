@@ -410,3 +410,31 @@ progress {
 	border-radius: 0.25rem;
 	padding: 1rem;
 }
+
+/* tags */
+
+.tags {
+	margin-top: 1rem;
+}
+
+.tag {
+	padding: 0.5rem 1rem;
+	display: inline-block;
+	background-color: #9cf;
+	border-radius: 0.25rem;
+	margin-right: 1rem;
+	border: 1px solid #69c;
+}
+
+.tag p, .tag .delete-tag {
+	display: inline;
+}
+
+.tag .delete-tag {
+	margin-left: 0.5rem;
+	cursor: pointer;
+	background-color: transparent;
+	border: none;
+	padding: 0;
+
+}
