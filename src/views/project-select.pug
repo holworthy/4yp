@@ -1,0 +1,23 @@
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 #{pathway.name}
+		.container.white.bordered.p1.m1-top
+			table
+				thead
+					tr
+						th Title
+						th Supervised By
+				tbody
+					each projectProposal in projectProposals
+						tr
+							td
+								a(href="/projectproposals/" + projectProposal.id)  #{projectProposal.title}
+							td
+								if projectProposal.createdBy
+									a(href="/users/" + projectProposal.createdBy) #{projectProposal.createdByName}
+								else
+									| Anonymous
