@@ -452,7 +452,6 @@ class ProjectProposal {
 		this.markScheme = markScheme;
 
 		this.supervisors = [];
-		this.genres = [];
 		this.tags = [];
 	}
 
@@ -464,9 +463,6 @@ class ProjectProposal {
 
 		let stmt2 = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ?");
 		stmt2.all(row1.id).forEach(row => projectProposal.supervisors.push(User.getById(row.supervisorId)));
-
-		let stmt3 = db.prepare("SELECT * FROM projectProposalsGenres WHERE projectProposalId = ?");
-		stmt3.all(row1.id).forEach(row => projectProposal.genres.push(Genre.getById(row.genreId)));
 
 		let stmt4 = db.prepare("SELECT * FROM projectProposalsTags WHERE projectProposalId = ?");
 		stmt4.all(row1.id).forEach(row => projectProposal.tags.push(Tag.getById(row.tagId)));
