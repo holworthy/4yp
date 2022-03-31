@@ -12,9 +12,9 @@ html(lang="en")
 					thead 
 						tr 
 							th Choice 
-							th title 
-							th supervised by 
-							th remove 
+							th Title 
+							th Supervised By 
+							th Remove 
 					tbody 
 						each val in [0, 1, 2]
 							tr 
@@ -27,7 +27,8 @@ html(lang="en")
 											a(href="/users/" + choices[val].createdBy) #{choices[val].createdByName}
 										else
 											| Anonymous
-									td Remove 
+									td 
+										button(class = "removeSelectionButton", data-project-id = choices[val], data-choice-id = val+1) Remove
 								else 
 									th -
 									th -

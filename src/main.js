@@ -806,10 +806,8 @@ app.get("/projects/:id", (req, res) => {
 		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ? AND projectProposals.id = ?").get(pathwayId, rowCS.choice1); 
 		let choice2 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ? AND projectProposals.id = ?").get(pathwayId, rowCS.choice2);
 		let choice3 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ? AND projectProposals.id = ?").get(pathwayId, rowCS.choice3);
-		// let choice2 = choice1;
-		// let choice3 = choice1;
 		let choices = [choice1, choice2, choice3];
-		
+
 		res.render("project-select", {
 			pathway: Pathway.getById(pathwayId),
 			projectProposals: projectProposals,
@@ -842,6 +840,24 @@ app.post("/api/projectSelection/new", (req, res) => {
 	else if (cS.getChoice3() == null) {
 		let choice3Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice3 = ? WHERE studentId = ?");
 		choice3Stmt.run(projectId, cS.getStudent());
+		res.sendStatus(200);
+	}
+});
+
+app.post("/api/projectSelection/remove", (req, res) => {
+	if (req.body.choiceId == 1) {
+		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice1 = null WHERE studentId = ?");
+		choiceStmt.run(req.session.user.id);
+		res.sendStatus(200);
+	}
+	else if (req.body.choiceId == 2) {
+		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice2 = null WHERE studentId = ?");
+		choiceStmt.run(req.session.user.id);
+		res.sendStatus(200);
+	}
+	else if (req.body.choiceId == 3) {
+		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice3 = null WHERE studentId = ?");
+		choiceStmt.run(req.session.user.id);
 		res.sendStatus(200);
 	}
 });
