@@ -1,16 +1,44 @@
 html(lang="en")
 	head
 		include includes/head.pug
+		script(src="/js/project-select.js")
 	body
 		include includes/header.pug
 		main
 			h2 #{pathway.name}
+		if !(choices.every(choice => (choice == null)))
+			.container.white.bordered.p1.m1-top
+				table 
+					thead 
+						tr 
+							th Choice 
+							th title 
+							th supervised by 
+							th remove 
+					tbody 
+						each val in [0, 1, 2]
+							tr 
+								th #{val + 1}
+								if choices[val] != null
+									td 
+										a(href="/projectproposals/" + choices[val].id)  #{choices[val].title}
+									td 
+										if choices[val].createdBy
+											a(href="/users/" + choices[val].createdBy) #{choices[val].createdByName}
+										else
+											| Anonymous
+									td Remove 
+								else 
+									th -
+									th -
+									th -
 		.container.white.bordered.p1.m1-top
 			table
 				thead
 					tr
 						th Title
 						th Supervised By
+						th Select
 				tbody
 					each projectProposal in projectProposals
 						tr
@@ -21,3 +49,5 @@ html(lang="en")
 									a(href="/users/" + projectProposal.createdBy) #{projectProposal.createdByName}
 								else
 									| Anonymous
+							td
+								button(class = "projectSelectButton", data-project-id = projectProposal.id) Select
