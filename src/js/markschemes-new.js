@@ -42,11 +42,11 @@ window.addEventListener("load", () => {
 
 	createMarkschemeButton.addEventListener("click", () => {
 		let xhr = new XMLHttpRequest();
-		xhr.open("POST", "/api/markscheme/new");
+		xhr.open("POST", "/api/markschemes/new");
 		xhr.setRequestHeader("Content-Type", "application/json");
 		xhr.addEventListener("load", () => {
 			let response = JSON.parse(xhr.response);
-			location.href = "/markscheme/" + response.markSchemeId;
+			location.href = "/markschemes/" + response.markSchemeId;
 		});
 		xhr.addEventListener("error", () => {
 			// TODO: do something when this goes wrong
