@@ -982,27 +982,19 @@ app.get("/overview", (req, res) => {
 		});
 	}
 });
-app.post("/overview/github", (req, res) => {
-	if(req.session.user.isStudent){
-		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
-		let row1 = stmt1.get(req.session.user.id);
-		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
-		let project = Project.getById(cS.getProject());
-		let stmt2 = db.prepare("UPDATE OR IGNORE projects SET githubLink = ? WHERE id = ?");
-		stmt2.run(req.body.githubLink, project.getId());
-	}
-	res.redirect("/overview");
-});
-app.post("/overview/overleaf", (req, res) => {
-	if(req.session.user.isStudent){
-		let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
-		let row1 = stmt1.get(req.session.user.id);
-		let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
-		let project = Project.getById(cS.getProject());
-		let stmt2 = db.prepare("UPDATE OR IGNORE projects SET overleafLink = ? WHERE id = ?");
-		stmt2.run(req.body.overleafLink, project.getId());
-	}
-	res.redirect("/overview");
+
+["github", "overleaf"].forEach(e => {
+	app.post("/overview/" + e, (req, res) => {
+		if(req.session.user.isStudent){
+			let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+			let row1 = stmt1.get(req.session.user.id);
+			let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
+			let project = Project.getById(cS.getProject());
+			let stmt2 = db.prepare("UPDATE OR IGNORE projects SET " + e + "Link = ? WHERE id = ?");
+			stmt2.run(req.body[e + "Link"], project.getId());
+		}
+		res.redirect("/overview");
+	});
 });
 
 app.use("/media", express.static("./media"));
