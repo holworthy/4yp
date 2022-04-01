@@ -625,7 +625,16 @@ app.post("/cohorts/new", (req, res) => {
 app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
 app.get("/cohorts/:id", (req, res) => {
 	try {
-		res.render("cohort", {cohort: Cohort.getById(req.params.id)});
+		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
+		let cohort = cohortStmt.get(req.params.id);
+
+		let cohortStudentsStmt = db.prepare("SELECT cohortsStudents.*, cohortsStudents.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title FROM cohortsStudents LEFT JOIN users ON cohortsStudents.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsStudents.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsStudents.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsStudents.choice3 = p3.id WHERE cohortId = ?");
+		let cohortStudents = cohortStudentsStmt.all(req.params.id); 
+
+		res.render("cohort", {
+			cohort: cohort,
+			cohortStudents: cohortStudents
+		});
 	} catch(e) {
 		res.redirect("/cohorts");
 	}
