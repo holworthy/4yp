@@ -114,13 +114,17 @@ header {
 	right: 0;
 }
 
-header div {
+header > div {
 	width: 60%;
 	margin: auto;
 	padding: 1rem;
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
+}
+
+header div a {
+	text-align: right;
 }
 
 .bordered {
@@ -436,5 +440,4 @@ progress {
 	background-color: transparent;
 	border: none;
 	padding: 0;
-
 }
