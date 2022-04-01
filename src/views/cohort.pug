@@ -41,7 +41,10 @@ html(lang="en")
 									else
 										| Not yet picked
 								td
-									a(href="/cohorts/" + cohort.id + "/students/" + student.studentId) Manually Assign 
+									if student.assignedChoice
+										a(href="/projectproposals/" + student.assignedChoice) #{student.assignedChoiceTitle}
+									else
+										a(href="/cohorts/" + cohort.id + "/students/" + student.studentId) Manually Assign 
 								td #{student.doneChoosing ? "Yes" : "No"}
 								td #{student.project ? student.project : "Not yet created"}
 								td #{student.deferring ? "Yes" : "No"}
@@ -58,7 +61,7 @@ html(lang="en")
 					input#student-name-input(type="text", placeholder="Type a student name")
 					#student-box
 
-			div
-				
-
-
+			.m2-top
+				h2 Assign Projects
+				p WARNING: THIS ACTION IS NOT REVERSIBLE!
+				a(href="/cohorts/" + cohort.id + "/assignprojects") Assign Projects

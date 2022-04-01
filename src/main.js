@@ -623,13 +623,13 @@ app.post("/cohorts/new", (req, res) => {
 	}
 });
 app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
-app.get("/cohorts/:id", (req, res) => {
+app.get("/cohorts/:cohortId", (req, res) => {
 	try {
 		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
-		let cohort = cohortStmt.get(req.params.id);
+		let cohort = cohortStmt.get(req.params.cohortId);
 
-		let cohortStudentsStmt = db.prepare("SELECT cohortsStudents.*, cohortsStudents.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title FROM cohortsStudents LEFT JOIN users ON cohortsStudents.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsStudents.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsStudents.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsStudents.choice3 = p3.id WHERE cohortId = ?");
-		let cohortStudents = cohortStudentsStmt.all(req.params.id); 
+		let cohortStudentsStmt = db.prepare("SELECT cohortsStudents.*, cohortsStudents.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle FROM cohortsStudents LEFT JOIN users ON cohortsStudents.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsStudents.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsStudents.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsStudents.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsStudents.assignedChoice = p4.id WHERE cohortId = ?");
+		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId); 
 
 		res.render("cohort", {
 			cohort: cohort,
@@ -637,6 +637,98 @@ app.get("/cohorts/:id", (req, res) => {
 		});
 	} catch(e) {
 		res.redirect("/cohorts");
+	}
+});
+app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
+	let cohortStudentsStmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ?");
+	let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
+
+	let projectProposalsStmt = db.prepare("SELECT * FROM projectProposals");
+	let projectProposals = projectProposalsStmt.all();
+
+	let supervisorsStmt = db.prepare("SELECT * FROM users WHERE users.isSupervisor = 1");
+	let supervisors = supervisorsStmt.all();
+
+	function shuffle(list) {
+		for(let i = 0; i < list.length; i++) {
+			let r = Math.floor(Math.random() * list.length);
+			let temp = list[r];
+			list[r] = list[i];
+			list[i] = temp;
+		}
+	}
+
+	shuffle(cohortStudents);
+
+	function projectProposalSupervisorsContains(projectProposalId, supervisorId) {
+		let stmt = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ? AND supervisorId = ?");
+		let row = stmt.get(projectProposalId, supervisorId);
+		return !!row;
+	}
+
+	function checkConditions() {
+		for(let i = 0; i < supervisors.length; i++) {
+			let spacesLeft = supervisors[i].maxNumToSupervise;
+			for(let j = 0; j < cohortStudents.length; j++) {
+				if(cohortStudents.assignedChoice != null && projectProposalSupervisorsContains(cohortStudents.assignedChoice, supervisors[i].id)) {
+					spacesLeft--;
+					if(spacesLeft < 0)
+						return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	function backtrack(i) {
+		if(i >= cohortStudents.length)
+			return true;
+		if(cohortStudents[i].assignedChoice == null) {
+			let choices = [];
+			if(cohortStudents[i].choice1 != null)
+				choices.push(cohortStudents[i].choice1);
+			if(cohortStudents[i].choice2 != null)
+				choices.push(cohortStudents[i].choice2);
+			if(cohortStudents[i].choice3 != null)
+				choices.push(cohortStudents[i].choice3);
+
+			for(let choiceI = 0; choiceI < choices.length; choiceI++) {
+				let choice = choices[choiceI];
+				cohortStudents[i].assignedChoice = choice;
+				if(checkConditions() && backtrack(i + 1))
+					return true;
+			}
+
+			let projectProposals2 = [];
+			for(let j = 0; j < projectProposals.length; j++)
+				projectProposals2.push(projectProposals[j]);
+			shuffle(projectProposals2);
+			for(let choiceI = 0; choiceI < projectProposals2.length; choiceI++) {
+				let choice = projectProposals2[choiceI].id;
+				cohortStudents[i].assignedChoice = choice;
+				if(checkConditions() && backtrack(i + 1))
+					return true;
+			}
+
+			cohortStudents[i].assignedChoice = null;
+			return false;
+		} else {
+			return backtrack(i + 1);
+		}
+	}
+
+	let result = backtrack(0);
+	if(result) {
+		for(let j = 0; j < cohortStudents.length; j++) {
+			let stmt = db.prepare("UPDATE cohortsStudents SET assignedChoice = ? WHERE cohortId = ? AND studentId = ?");
+			stmt.run(cohortStudents[j].assignedChoice, cohortStudents[j].cohortId, cohortStudents[j].studentId);
+
+			// TODO: verify that this ran successfully
+		}
+		res.redirect("/cohorts/" + req.params.cohortId);
+	} else {
+		res.send("hmm. that didnt work. something is very wrong");
 	}
 });
 
