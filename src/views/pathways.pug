@@ -12,5 +12,6 @@ html(lang="en")
 						h2 #{pathways[i].name}
 				- if(pathways.length == 0)
 					p No pathways exist yet!
-			a.m1-top(href="/pathways/new")
-				h2 Or Create A New Pathway 
+			if !user.isStudent
+				a.m1-top(href="/pathways/new")
+					h2 Or Create A New Pathway 
