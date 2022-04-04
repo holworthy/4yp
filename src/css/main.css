@@ -441,3 +441,54 @@ progress {
 	border: none;
 	padding: 0;
 }
+
+.flex-list {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+}
+
+.draggable-list {
+	border: 1px solid #e3e5e4;
+	color: #34444f;
+	padding: 0;
+	list-style-type: none;
+}
+
+.draggable-list li {
+	background-color: #fff;
+	display: flex;
+	flex: 1;
+}
+
+.draggable-list li:not(:last-of-type) {
+	border-bottom: 1px solid #e3e5e4;
+}
+
+.draggable-list .number {
+	background-color: #c3c7ca;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2rem;
+	height: 4.5rem;
+	width: 4.5rem;
+}
+
+.draggable-list li.over .draggable {
+	background-color: #eaeaea;
+}
+
+.draggable-list .project-detail {
+	margin: 0 20px 0 0;
+}
+
+.draggable {
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 15px;
+	flex: 1;
+}

@@ -942,6 +942,34 @@ app.post("/api/projectSelection/remove", (req, res) => {
 	}
 });
 
+app.post("/api/projectSelection/swap", (req, res) => {
+	if (req.body.fromId == 0)
+		from = db.prepare("SELECT choice1 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice1;
+	else if (req.body.fromId == 1)
+		from = db.prepare("SELECT choice2 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice2;
+	else
+		from = db.prepare("SELECT choice3 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice3;
+	console.log(from);
+	if (req.body.toId == 0) {
+		to = db.prepare("SELECT choice1 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice1;
+		db.prepare("UPDATE cohortsStudents SET choice1 = ? WHERE studentId = ?").run(from, req.session.user.id);
+	}
+	else if (req.body.toId == 1) {
+		to = db.prepare("SELECT choice2 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice2;
+		db.prepare("UPDATE cohortsStudents SET choice2 = ? WHERE studentId = ?").run(from, req.session.user.id);
+	}
+	else{
+		to = db.prepare("SELECT choice3 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice3;
+		db.prepare("UPDATE cohortsStudents SET choice3 = ? WHERE studentId = ?").run(from, req.session.user.id);
+	}
+	if (req.body.fromId == 0)
+		db.prepare("UPDATE cohortsStudents SET choice1 = ? WHERE studentId = ?").run(to, req.session.user.id);
+	else if (req.body.fromId == 1)
+		db.prepare("UPDATE cohortsStudents SET choice2 = ? WHERE studentId = ?").run(to, req.session.user.id);
+	else
+		db.prepare("UPDATE cohortsStudents SET choice3 = ? WHERE studentId = ?").run(to, req.session.user.id);
+});
+
 app.get("/projectproposals", (req, res) => {
 	let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id");
 	let unapprovedProjectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id WHERE approved = 0");

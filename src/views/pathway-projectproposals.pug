@@ -7,32 +7,27 @@ html(lang="en")
 		main
 			h2 #{pathway.name}
 		if !(choices.every(choice => (choice == null)))
-			.container.white.bordered.p1.m1-top
-				table 
-					thead 
-						tr 
-							th Choice 
-							th Title 
-							th Supervised By 
-							th Remove 
-					tbody 
-						each val in [0, 1, 2]
-							tr 
-								th #{val + 1}
-								if choices[val] != null
-									td 
-										a(href="/projectproposals/" + choices[val].id)  #{choices[val].title}
-									td 
+			.container.white.bordered.flex-list.p1.m1-top
+				h2 Choices
+				br
+				ul.draggable-list#draggable-list 
+					each val in [0, 1, 2]
+						li(data-index = val)
+							span.number #{val + 1}
+							if choices[val] != null
+								.draggable(draggable="true")
+									p.project-detail #{choices[val].title}
+									p.project-detail 
 										if choices[val].createdBy
 											a(href="/users/" + choices[val].createdBy) #{choices[val].createdByName}
 										else
 											| Anonymous
-									td 
-										button(class = "removeSelectionButton", data-project-id = choices[val], data-choice-id = val+1) Remove
-								else 
-									th -
-									th -
-									th -
+									button(class = "removeSelectionButton", data-project-id = choices[val], data-choice-id = val+1) Remove
+							else 
+								.draggable(draggable="true")
+									p.project-detail -
+									p.project-detail -
+									i(class="fas fa-grip-lines")
 		.container.white.bordered.p1.m1-top
 			table
 				thead
