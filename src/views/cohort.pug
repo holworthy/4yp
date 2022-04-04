@@ -22,36 +22,46 @@ html(lang="en")
 							th Pathway
 							th Remove
 					tbody
-						- let students = cohort.getStudents();
-						- for(let i = 0; i < students.length; i++) {
-						tr
-							td #{students[i].student.name}
-							td #{students[i].choice1 ? students[i].choice1 : "Not yet picked"}
-							td #{students[i].choice2 ? students[i].choice2 : "Not yet picked"}
-							td #{students[i].choice3 ? students[i].choice3 : "Not yet picked"}
-							td
-								a(href="/cohorts/" + cohort.id + "/students/" + students[i].student.id) Manually Assign 
-							td #{students[i].doneChoosing ? "Yes" : "No"}
-							td #{students[i].project ? students[i].project : "Not yet created"}
-							td #{students[i].deferring ? "Yes" : "No"}
-							td #{students[i].pathway}
-							td
-								button Remove
-						- }
+						each student in cohortStudents
+							tr
+								td #{student.name}
+								td
+									if student.choice1
+										a(href="/projectproposals/" + student.choice1) #{student.choice1Title}
+									else
+										| Not yet picked
+								td
+									if student.choice2
+										a(href="/projectproposals/" + student.choice2) #{student.choice2Title}
+									else
+										| Not yet picked
+								td
+									if student.choice3
+										a(href="/projectproposals/" + student.choice3) #{student.choice3Title}
+									else
+										| Not yet picked
+								td
+									if student.assignedChoice
+										a(href="/projectproposals/" + student.assignedChoice) #{student.assignedChoiceTitle}
+									else
+										a(href="/cohorts/" + cohort.id + "/students/" + student.studentId) Manually Assign 
+								td #{student.doneChoosing ? "Yes" : "No"}
+								td #{student.project ? student.project : "Not yet created"}
+								td #{student.deferring ? "Yes" : "No"}
+								td #{student.pathway}
+								td
+									button Remove
 
-						- if(students.length == 0) {
-						
+					if cohortStudents.length == 0
 						tr
 							td(colspan="8") No students in this cohort
-						
-						- }
 			div.m2-top
 				h2 Add Students
 				div.m1-top
 					input#student-name-input(type="text", placeholder="Type a student name")
 					#student-box
 
-			div
-				
-
-
+			.m2-top
+				h2 Assign Projects
+				p WARNING: THIS ACTION IS NOT REVERSIBLE!
+				a(href="/cohorts/" + cohort.id + "/assignprojects") Assign Projects

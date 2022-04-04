@@ -593,31 +593,12 @@ app.get("/users/:id", (req, res) => {
 	}
 });
 
-app.get("/pathwayselect", (req, res) => {
-	res.send("Pathway Selection");
-});
-
-app.get("/genreselect", (req, res) => {
-	res.send("Genre Selection");
-});
-
-app.get("/genres", (req, res) => {
-	res.send("Genres");
-});
-
 app.get("/project/:id", (req, res) => {
 	res.render("projectoverview", {
 		id: req.params.id
 	})
 });
 
-app.get("/studentoverview", (req, res) => {
-	res.send("Student Overview");
-});
-
-app.get("/submission", (req, res) => {
-	res.send("Submission");
-});
 app.get("/selectpathways", (req, res) => res.send("/selectpathways"));
 
 /* cohorts */
@@ -646,11 +627,112 @@ app.post("/cohorts/new", (req, res) => {
 	}
 });
 app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
-app.get("/cohorts/:id", (req, res) => {
+app.get("/cohorts/:cohortId", (req, res) => {
 	try {
-		res.render("cohort", {cohort: Cohort.getById(req.params.id)});
+		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
+		let cohort = cohortStmt.get(req.params.cohortId);
+
+		let cohortStudentsStmt = db.prepare("SELECT cohortsStudents.*, cohortsStudents.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle FROM cohortsStudents LEFT JOIN users ON cohortsStudents.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsStudents.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsStudents.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsStudents.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsStudents.assignedChoice = p4.id WHERE cohortId = ?");
+		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId); 
+
+		res.render("cohort", {
+			cohort: cohort,
+			cohortStudents: cohortStudents
+		});
 	} catch(e) {
 		res.redirect("/cohorts");
+	}
+});
+app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
+	let cohortStudentsStmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ?");
+	let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
+
+	let projectProposalsStmt = db.prepare("SELECT * FROM projectProposals");
+	let projectProposals = projectProposalsStmt.all();
+
+	let supervisorsStmt = db.prepare("SELECT * FROM users WHERE users.isSupervisor = 1");
+	let supervisors = supervisorsStmt.all();
+
+	function shuffle(list) {
+		for(let i = 0; i < list.length; i++) {
+			let r = Math.floor(Math.random() * list.length);
+			let temp = list[r];
+			list[r] = list[i];
+			list[i] = temp;
+		}
+	}
+
+	shuffle(cohortStudents);
+
+	function projectProposalSupervisorsContains(projectProposalId, supervisorId) {
+		let stmt = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ? AND supervisorId = ?");
+		let row = stmt.get(projectProposalId, supervisorId);
+		return !!row;
+	}
+
+	function checkConditions() {
+		for(let i = 0; i < supervisors.length; i++) {
+			let spacesLeft = supervisors[i].maxNumToSupervise;
+			for(let j = 0; j < cohortStudents.length; j++) {
+				if(cohortStudents.assignedChoice != null && projectProposalSupervisorsContains(cohortStudents.assignedChoice, supervisors[i].id)) {
+					spacesLeft--;
+					if(spacesLeft < 0)
+						return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	function backtrack(i) {
+		if(i >= cohortStudents.length)
+			return true;
+		if(cohortStudents[i].assignedChoice == null) {
+			let choices = [];
+			if(cohortStudents[i].choice1 != null)
+				choices.push(cohortStudents[i].choice1);
+			if(cohortStudents[i].choice2 != null)
+				choices.push(cohortStudents[i].choice2);
+			if(cohortStudents[i].choice3 != null)
+				choices.push(cohortStudents[i].choice3);
+
+			for(let choiceI = 0; choiceI < choices.length; choiceI++) {
+				let choice = choices[choiceI];
+				cohortStudents[i].assignedChoice = choice;
+				if(checkConditions() && backtrack(i + 1))
+					return true;
+			}
+
+			let projectProposals2 = [];
+			for(let j = 0; j < projectProposals.length; j++)
+				projectProposals2.push(projectProposals[j]);
+			shuffle(projectProposals2);
+			for(let choiceI = 0; choiceI < projectProposals2.length; choiceI++) {
+				let choice = projectProposals2[choiceI].id;
+				cohortStudents[i].assignedChoice = choice;
+				if(checkConditions() && backtrack(i + 1))
+					return true;
+			}
+
+			cohortStudents[i].assignedChoice = null;
+			return false;
+		} else {
+			return backtrack(i + 1);
+		}
+	}
+
+	let result = backtrack(0);
+	if(result) {
+		for(let j = 0; j < cohortStudents.length; j++) {
+			let stmt = db.prepare("UPDATE cohortsStudents SET assignedChoice = ? WHERE cohortId = ? AND studentId = ?");
+			stmt.run(cohortStudents[j].assignedChoice, cohortStudents[j].cohortId, cohortStudents[j].studentId);
+
+			// TODO: verify that this ran successfully
+		}
+		res.redirect("/cohorts/" + req.params.cohortId);
+	} else {
+		res.send("hmm. that didnt work. something is very wrong");
 	}
 });
 
@@ -703,20 +785,10 @@ app.post("/projectproposal/new", (req, res) => {
 	}
 });
 
-
-app.get("/mystudentprojects", (req, res) => res.send("mystudentprojects"));
-app.get("/project/:id", (req, res) => res.send("project " + req.params.id));
-app.get("/marking", (req, res) => res.send("/marking"));
-
-app.get("/assign", (req, res) => res.send("assign"));
-app.get("/projects", (req, res) => res.send("projects"));
-
-app.get("/pathways", (req, res) => {
-	if (User.getById(req.session.user.id).getIsStudent())
-		res.render("student-pathways", {pathways: Pathway.getAll()});
-	else
-		res.render("pathways", {pathways: Pathway.getAll()});
-});
+app.get("/pathways", (req, res) => res.render("pathways", {
+	user: req.session.user,
+	pathways: Pathway.getAll()
+}));
 app.get("/pathways/new", (req, res) => res.render("pathways-new"));
 app.post("/pathways/new", (req, res) => {
 	let name = req.body.name;
@@ -738,68 +810,72 @@ app.post("/pathways/new", (req, res) => {
 	}
 });
 app.get("/pathways/:id", (req, res) => {
-	let pathwayId = req.params.id;
-	try {
-		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
-		let projectProposals = projectProposalsStmt.all(pathwayId);
-		
-		let cohorts = [];
-		let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN users ON cohortsStudents.studentId = users.id WHERE pathwayId = ?");
-		let rows = stmt.all(pathwayId);
-		for(let i = 0; i < rows.length; i++) {
-			let row = rows[i];
+	if(req.session.user.isStudent) {
+		res.redirect(req.url + "/projectproposals");
+	} else {
+		let pathwayId = req.params.id;
+		try {
+			let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
+			let projectProposals = projectProposalsStmt.all(pathwayId);
+			
+			let cohorts = [];
+			let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN users ON cohortsStudents.studentId = users.id WHERE pathwayId = ?");
+			let rows = stmt.all(pathwayId);
+			for(let i = 0; i < rows.length; i++) {
+				let row = rows[i];
 
-			let cohortExists = false;
-			let cohort;
-			for(let j = 0; j < cohorts.length; j++) {
-				if(cohorts[j].id == rows[i].cohortId) {
-					cohortExists = true;
-					cohort = cohorts[j];
-					break;
+				let cohortExists = false;
+				let cohort;
+				for(let j = 0; j < cohorts.length; j++) {
+					if(cohorts[j].id == rows[i].cohortId) {
+						cohortExists = true;
+						cohort = cohorts[j];
+						break;
+					}
 				}
-			}
-			if(!cohortExists) {
-				cohort = {
-					id: row.cohortId,
-					name: row.cohortName,
-					students: []
-				};
-				cohorts.push(cohort);
+				if(!cohortExists) {
+					cohort = {
+						id: row.cohortId,
+						name: row.cohortName,
+						students: []
+					};
+					cohorts.push(cohort);
+				}
+
+				cohort.students.push({
+					id: row.studentId,
+					user: {
+						id: row.userId,
+						name: row.userName,
+						campusCardNumber: row.campusCardNumber,
+						email: row.email
+					},
+					choice1: row.choice1,
+					choice2: row.choice2,
+					choice3: row.choice3,
+					doneChoosing: row.doneChoosing
+				});
 			}
 
-			cohort.students.push({
-				id: row.studentId,
-				user: {
-					id: row.userId,
-					name: row.userName,
-					campusCardNumber: row.campusCardNumber,
-					email: row.email
-				},
-				choice1: row.choice1,
-				choice2: row.choice2,
-				choice3: row.choice3,
-				doneChoosing: row.doneChoosing
+			let supervisors = [];
+			let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN users ON supervisorsPathways.supervisorId = users.id");
+			console.log(supervisorsStmt.all());
+
+			res.render("pathway", {
+				pathway: Pathway.getById(pathwayId),
+				projectProposals: projectProposals,
+				cohorts: cohorts,
+				supervisors: supervisors
 			});
+		} catch(e) {
+			console.log(e);
+			res.redirect("/pathways");
 		}
-
-		let supervisors = [];
-		let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN users ON supervisorsPathways.supervisorId = users.id");
-		console.log(supervisorsStmt.all());
-
-		res.render("pathway", {
-			pathway: Pathway.getById(pathwayId),
-			projectProposals: projectProposals,
-			cohorts: cohorts,
-			supervisors: supervisors
-		});
-	} catch(e) {
-		console.log(e);
-		res.redirect("/pathways");
 	}
 });
 
-app.get("/projects/:id", (req, res) => {
-	let pathwayId = req.params.id;
+app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
+	let pathwayId = req.params.pathwayId;
 	try{
 		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
 		let projectProposals = projectProposalsStmt.all(pathwayId);
@@ -807,12 +883,12 @@ app.get("/projects/:id", (req, res) => {
 		let getCS = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 		let rowCS = getCS.get(req.session.user.id);
 
-		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ? AND projectProposals.id = ?").get(pathwayId, rowCS.choice1); 
-		let choice2 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ? AND projectProposals.id = ?").get(pathwayId, rowCS.choice2);
-		let choice3 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ? AND projectProposals.id = ?").get(pathwayId, rowCS.choice3);
+		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice1); 
+		let choice2 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice2);
+		let choice3 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice3);
 		let choices = [choice1, choice2, choice3];
 
-		res.render("project-select", {
+		res.render("pathway-projectproposals", {
 			pathway: Pathway.getById(pathwayId),
 			projectProposals: projectProposals,
 			choices: choices
