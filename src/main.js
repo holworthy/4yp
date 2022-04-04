@@ -62,7 +62,9 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
 db.exec("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES ('Amazingness', 100.0, 1)");
 
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
 // db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
 
 // db.exec("UPDATE OR IGNORE cohortsStudents SET projectid = 1 WHERE studentId = 5");
@@ -75,7 +77,9 @@ db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, su
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
 db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (2, 2)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (2, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (3, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (4, 2)");
 
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
