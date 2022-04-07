@@ -785,6 +785,17 @@ app.post("/projectproposal/new", (req, res) => {
 	}
 });
 
+app.get("/api/tag-search", (req, res) => {
+	res.setHeader("Content-Type", "application/json");
+	// TODO: permission check here too
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("SELECT id, name FROM tags where tags.name LIKE '%' || ? || '%' LIMIT 5");
+		res.send(JSON.stringify(stmt.all(req.query.name)));
+	}
+});
+
 app.get("/pathways", (req, res) => res.render("pathways", {
 	user: req.session.user,
 	pathways: Pathway.getAll()
@@ -1027,6 +1038,12 @@ app.post("/api/projectproposals/upload", (req, res) => {
 
 	let stmt6 = db.prepare("INSERT INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (?, ?)");
 	stmt6.run(projectProposal.id, req.session.user.id);
+
+	let tags = req.body.tags.split(",");
+	for (let i = 0; i < tags.length; i++){
+		let stmt7 = db.prepare("INSERT INTO projectProposalsTags(projectProposalId, tagId) VALUES (?, ?)");
+		stmt7.run(projectProposal.id, tags[i]);
+	}
 
 	res.send(JSON.stringify(projectProposal.id));
 });

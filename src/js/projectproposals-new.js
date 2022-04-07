@@ -1,3 +1,11 @@
+function deleteTag(tagElement) {
+	tagElement.parentElement.remove();
+	let tagsDiv = document.getElementById("tags");
+	tagsDiv.dataset.currentTagsNum -= 1;
+	if (tagsDiv.dataset.currentTagsNum == 0);
+		document.getElementById("tagsLabel").style.display = "none";
+}
+
 window.addEventListener("load", () => {
 	let form = document.getElementById("new-projectproposal-form");
 	let mediaInput = document.getElementById("media-input");
@@ -34,6 +42,59 @@ window.addEventListener("load", () => {
 		urlInput.focus();
 	});
 
+	let tagNameInput = document.getElementById("tag-name-input");
+	let tagBox = document.getElementById("tag-box");
+	tagNameInput.addEventListener("keyup", () => {
+		let name = tagNameInput.value;
+
+		let xhr = new XMLHttpRequest();
+		xhr.addEventListener("load", () => {
+			let tags = JSON.parse(xhr.response);
+			tagBox.innerHTML = "";
+
+			for(let i = 0; i < tags.length; i++) {
+				console.log(tags[i]);
+
+				let tagDiv = document.createElement("div");
+				tagDiv.classList.add("cohort-tag-div");
+				tagDiv.innerHTML = "<p>" + tags[i].name + "</p>";
+
+				let button = document.createElement("button");
+				tagDiv.append(button);
+				button.innerText = "Add to project";
+				button.setAttribute("type", "button");
+				button.addEventListener("click", () => {
+					let para = document.createElement("p");
+					let node = document.createTextNode(tags[i].name);
+					let remove = document.createElement("p");
+					let x = document.createTextNode("🗙");
+					para.appendChild(node);
+					remove.appendChild(x);
+					remove.setAttribute("class", "delete-tag");
+					remove.setAttribute("onclick", "deleteTag(this)");
+
+					let tagDiv2 = document.createElement("div");
+					tagDiv2.setAttribute("class", "tag");
+					tagDiv2.setAttribute("data-tag-id", tags[i].id);
+					tagDiv2.appendChild(para);
+					tagDiv2.appendChild(remove);
+					let tagsDiv = document.getElementById("tags");
+					tagsDiv.appendChild(tagDiv2);
+					tagsDiv.dataset.currentTagsNum += 1;
+
+					let tagsLabel = document.getElementById("tagsLabel");
+					if (tagsLabel.style.display == "none")
+						tagsLabel.style.display = "inline";
+					
+				});
+
+				tagBox.append(tagDiv);
+			}
+		});
+		xhr.open("GET", "/api/tag-search?name=" + encodeURIComponent(name));
+		xhr.send();
+	});
+
 	createButton.addEventListener("click", e => {
 		e.preventDefault();
 
@@ -52,6 +113,13 @@ window.addEventListener("load", () => {
 			if(pathwayCheckboxes[i].checked)
 				pathways.push(pathwayCheckboxes[i].name.substring(17));
 		fd.append("pathways", pathways.join(","));
+
+		let tags = [];
+		let tagDivs = document.getElementsByClassName("tag");
+		for (let i = 0; i < tagDivs.length; i++){
+			tags.push(tagDivs[i].getAttribute("data-tag-id"));
+		}
+		fd.append("tags", tags.join(","));
 
 		let xhr = new XMLHttpRequest();
 		xhr.addEventListener("load", e => {

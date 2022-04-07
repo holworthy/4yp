@@ -46,6 +46,12 @@ html(lang="en")
 									td
 										input(type="checkbox", class="pathway-checkbox" name="pathway-checkbox-" + pathways[i].id)
 								- }
-
+					div.m2-top
+						label#tagsLabel(style="display: none") Tags 
+							.tags#tags(data-current-tags-num=0)
+						label Add Tags
+						div.m1-top
+							input#tag-name-input(type="text", placeholder="Type a Tag")
+							#tag-box
 				button#create-button.m1-top(type="button") Create
 				progress#progress-bar(value="0")
