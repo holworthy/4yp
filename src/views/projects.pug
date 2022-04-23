@@ -1,0 +1,13 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Projects
+			div
+				each project in projects
+					p #{JSON.stringift(project)}
+				if projects.length == 0
+					p No Projects

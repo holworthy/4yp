@@ -87,412 +87,99 @@ db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Web-Based Programmin
 
 // class definitions
 
-class User {
-	constructor(id, name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, maxNumToSupervise, isAdmin, isStudent, isSupervisor, isHubstaff) {
-		this.id = id;
-		this.name = name;
-		this.nickname = nickname;
-		this.email = email;
-		this.salt = salt;
-		this.passwordHash = passwordHash;
-		this.campusCardNumber = campusCardNumber;
-		this.threeTwoThree = threeTwoThree;
-		this.maxNumToSupervise = maxNumToSupervise;
-		this.isAdmin = isAdmin;
-		this.isStudent = isStudent;
-		this.isSupervisor = isSupervisor;
-		this.isHubstaff = isHubstaff;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getName() {
-		return this.name;
-	}
-
-	getNickname() {
-		return this.nickname;
-	}
-
-	getEmail() {
-		return this.email;
-	}
-
-	getSalt() {
-		return this.salt;
-	}
-
-	getPasswordHash() {
-		return this.passwordHash;
-	}
-
-	getCampusCardNumber() {
-		return this.campusCardNumber;
-	}
-
-	getThreeTwoThree() {
-		return this.threeTwoThree;
-	}
-
-	getMaxNumToSupervise() {
-		return this.maxNumToSupervise;
-	}
-
-	getIsAdmin() {
-		return this.isAdmin;
-	}
-
-	getIsStudent() {
-		return this.isStudent;
-	}
-
-	getIsSupervisor() {
-		return this.isSupervisor;
-	}
-
-	getIsHubstaff() {
-		return this.isHubstaff;
-	}
-	
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM users WHERE id = ?");
-		let row = stmt.get(id);
-		return new User(row.id, row.name, row.nickname, row.email, row.salt, row.passwordHash, row.campusCardNumber, row.threeTwoThree, row.maxNumToSupervise, row.isAdmin, row.isStudent, row.isSupervisor, row.isHubstaff);
-	}
-
-	static getAll() {
-		let stmt = db.prepare("SELECT * FROM users");
-		return stmt.all();
-	}
+function getUserById(userId) {
+	let stmt = db.prepare("SELECT * FROM users WHERE id = ?");
+	return stmt.get(userId);
 }
 
-class MarkScheme {
-	constructor(id, name) {
-		this.id = id;
-		this.name = name;
-		this.parts = [];
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getName() {
-		return this.name;
-	}
-
-	getParts() {
-		return this.parts;
-	}
-
-	static getById(id) {
-		let stmt1 = db.prepare("SELECT * FROM markSchemes WHERE id = ?");
-		let row1 = stmt1.get(id);
-
-		if(!row1)
-			return null;
-		
-		let markScheme = new MarkScheme(row1.id, row1.name);
-		let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
-		stmt2.all(id).forEach(row2 => markScheme.parts.push(new MarkSchemePart(row2.id, row2.name, row2.weight, markScheme)));
-
-		return markScheme;
-	}
-
-	static getAll() {
-		let stmt = db.prepare("SELECT * FROM markschemes");
-		let markschemes = [];
-		let rows = stmt.all();
-		for(let i = 0; i < rows.length; i++)
-			markschemes.push(new MarkScheme(rows[i].id, rows[i].name));
-		return markschemes;
-	}
+function getAllUsers() {
+	let stmt = db.prepare("SELECT * FROM users");
+	return stmt.all();
 }
 
-class MarkSchemePart {
-	constructor(id, name, weight, markScheme) {
-		this.id = id;
-		this.name = name;
-		this.weight = weight;
-		this.markScheme = markScheme;
-	}
+function getMarkSchemeById(markSchemeId) {
+	let stmt1 = db.prepare("SELECT * FROM markSchemes WHERE id = ?");
+	let markScheme = stmt1.get(markSchemeId);
+
+	let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
+	markScheme.parts = stmt2.all(markSchemeId);
+
+	return markScheme;
 }
 
-class Genre {
-	constructor(id, name) {
-		this.id = id;
-		this.name = name;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getName() {
-		return this.name;
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM genres WHERE id = ?");
-		let row = stmt.get(id);
-		return new Genre(row.id, row.name);
-	}
+function getAllMarkSchemes() {
+	let stmt = db.prepare("SELECT * FROM markSchemes");
+	return stmt.all();
 }
 
-class Tag {
-	constructor(id, name) {
-		this.id = id;
-		this.name = name;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getName() {
-		return this.name;
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM tags WHERE id = ?");
-		let row = stmt.get(id);
-		return new Tag(row.id, row.name);
-	}
+function getMarkSchemePartById(markSchemePartId) {
+	let stmt = db.prepare("SELECT * FROM markSchemeParts WHERE id = ?");
+	return stmt.all(markSchemePartId);
 }
 
-class Cohort {
-	constructor(id, name, archived) {
-		this.id = id;
-		this.name = name;
-		this.archived = archived;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getName() {
-		return this.name;
-	}
-
-	getArchived() {
-		return this.archived;
-	}
-
-	getStudents() {
-		let stmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ?");
-		let students = [];
-		let rows = stmt.all(this.id);
-		for(let i = 0; i < rows.length; i++)
-			students.push(new CohortStudent(rows[i].cohortId, User.getById(rows[i].studentId), rows[i].choice1, rows[i].choice2, rows[i].choice3, rows[i].doneChoosing, Project.getById(rows[i].projectId), rows[i].deferring, null));
-		return students;
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
-		let row = stmt.get(id);
-		return new Cohort(row.id, row.name, row.archived == 1);
-	}
-
-	static getAll() {
-		let stmt = db.prepare("SELECT * FROM cohorts WHERE archived = 0");
-		let cohorts = [];
-		let rows = stmt.all();
-		for(let i = 0; i < rows.length; i++)
-			cohorts.push(new Cohort(rows[i].id, rows[i].name, rows[i].archived == 1));
-		return cohorts;
-	}
+function getTagById(tagId) {
+	let stmt = db.prepare("SELECT * FROM tags WHERE id = ?");
+	return stmt.get(tagId);
 }
 
-class Pathway {
-	constructor(id, name) {
-		this.id = id;
-		this.name = name;
-		// this.archived = archived;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getName() {
-		return this.name;
-	}
-
-	// getArchived() {
-	// 	return this.archived;
-	// }
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM pathways WHERE id = ?");
-		let row = stmt.get(id);
-		return new Pathway(row.id, row.name);
-	}
-
-	static getAll() {
-		let stmt = db.prepare("SELECT * FROM pathways");
-		let pathways = [];
-		let rows = stmt.all();
-		for(let i = 0; i < rows.length; i++)
-			pathways.push(new Pathway(rows[i].id, rows[i].name));
-		return pathways;
-	}
+function getCohortById(cohortId) {
+	let stmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
+	return stmt.get(cohortId);
 }
 
-class Project {
-	constructor(id, projectProposalId, githubLink, overleafLink) {
-		this.id = id;
-		this.projectProposalId = projectProposalId;
-		this.githubLink = githubLink;
-		this.overleafLink = overleafLink;
-	}
-
-	getId() {
-		return this.id;
-	}
-
-	getProjectProposalId() {
-		return this.projectProposalId;
-	}
-
-	getGithubLink() {
-		return this.githubLink;
-	}
-
-	getOverleafLink() {
-		return this.getOverleafLink;
-	}
-
-	static getById(id) {
-		let stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
-		let row = stmt.get(id);
-		return row ? new Project(row.id, row.projectProposalId, row.githubLink, row.overleafLink) : null;
-	}
+function getAllCohorts() {
+	let stmt = db.prepare("SELECT * FROM cohorts");
+	return stmt.all();
 }
 
-class CohortStudent {
-	constructor(cohort, student, choice1, choice2, choice3, assignedChoice, doneChoosing, project, deferring, pathway) {
-		this.cohort = cohort;
-		this.student = student;
-		this.choice1 = choice1;
-		this.choice2 = choice2;
-		this.choice3 = choice3;
-		this.assignedChoice = assignedChoice;
-		this.doneChoosing = doneChoosing;
-		this.project = project;
-		this.deferring = deferring;
-		this.pathway = pathway;
-	}
-
-	toConsole(){
-		console.log("Cohort:"+this.cohort+"\n"+
-					"Student:"+this.student+"\n"+
-					"choice1:"+this.choice1+"\n"+
-					"choice2:"+this.choice2+"\n"+
-					"choice3:"+this.choice3+"\n"+
-					"assigned:"+this.assignedChoice+"\n"+
-					"doneChoosing"+this.doneChoosing+"\n"+
-					"project"+this.project+"\n"+
-					"defering"+this.deferring+"\n"+
-					"Pathway"+this.pathway);
-	}
-
-	getCohort() {
-		return this.cohort;
-	}
-
-	getStudent() {
-		return this.student;
-	}
-
-	getChoice1() {
-		return this.choice1;
-	}
-
-	getChoice2() {
-		return this.choice2;
-	}
-
-	getChoice3() {
-		return this.choice3;
-	}
-
-	getAssignedChoice() {
-		return this.assignedChoice;
-	}
-
-	getDoneChoosing() {
-		return this.doneChoosing;
-	}
-
-	getProject() {
-		return this.project;
-	}
-
-	getDeferring() {
-		return this.deferring;
-	}
-
-	getPathway() {
-		return this.pathway;
-	}
-
-	static getByCohortIdAndStudentId(cohortId, studentId) {
-		let stmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ? AND studentId = ?");
-		let row = stmt.get();
-		return row; // TODO: this is wrong
-	}
+function getPathwayById(pathwayId) {
+	let stmt = db.prepare("SELECT * FROM pathways WHERE id = ?");
+	return stmt.get(pathwayId);
 }
 
-class ProjectProposal {
-	constructor(id, title, description, approved, archived, markScheme) {
-		this.id = id;
-		this.title = title;
-		this.description = description;
-		this.approved = approved;
-		this.archived = archived;
-		this.markScheme = markScheme;
-
-		this.supervisors = [];
-		this.tags = [];
-	}
-
-	static getById(id) {
-		let stmt1 = db.prepare("SELECT * FROM projectProposals WHERE id = ?");
-		let row1 = stmt1.get(id);
-
-		let projectProposal = new ProjectProposal(row1.id, row1.title, row1.description, row1.approved, row1.archived, MarkScheme.getById(row1.markSchemeId));
-
-		let stmt2 = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ?");
-		stmt2.all(row1.id).forEach(row => projectProposal.supervisors.push(User.getById(row.supervisorId)));
-
-		let stmt4 = db.prepare("SELECT * FROM projectProposalsTags WHERE projectProposalId = ?");
-		stmt4.all(row1.id).forEach(row => projectProposal.tags.push(Tag.getById(row.tagId)));
-
-		return projectProposal;
-	}
-
-	static getAll() {
-		let stmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposals LEFT JOIN users ON projectProposals.createdBy = users.id");
-		return stmt.all();
-	}
+function getAllPathways() {
+	let stmt = db.prepare("SELECT * FROM pathways");
+	return stmt.all();
 }
 
+function getProjectById(projectId) {
+	let stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
+	return stmt.get(projectId);
+}
+
+function getCohortMembershipByCohortIdAndStudentId(cohortId, studentId) {
+	let stmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ? AND studentId = ?");
+	return stmt.get(cohortId, studentId);
+}
+
+function getProjectProposalById(projectProposalId) {
+	// let stmt1 = db.prepare("SELECT * FROM projectProposals WHERE id = ?");
+	// let row1 = stmt1.get(id);
+
+	// let projectProposal = new ProjectProposal(row1.id, row1.title, row1.description, row1.approved, row1.archived, getMarkSchemeById(row1.markSchemeId));
+
+	// let stmt2 = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ?");
+	// stmt2.all(row1.id).forEach(row => projectProposal.supervisors.push(getUserById(row.supervisorId)));
+
+	// let stmt4 = db.prepare("SELECT * FROM projectProposalsTags WHERE projectProposalId = ?");
+	// stmt4.all(row1.id).forEach(row => projectProposal.tags.push(getTagById(row.tagId)));
+
+	// return projectProposal;
+
+	let stmt = db.prepare("SELECT * FROM projectProposals WHERE id = ?");
+	return stmt.get(projectProposalId);
+}
 
 // web server
 
 let app = express();
-let cacheAge = 1000 * 60 * 60 * 24 * 7;
+let cacheAge = 604800000;
 
 app.use(bodyParser.urlencoded({
 	extended: false
 }));
 app.use(bodyParser.json());
-app.use("/css", express.static("./css", {maxAge: cacheAge}));
-app.use("/js", express.static("./js", {maxAge: cacheAge}));
-app.use("/fonts", express.static("./fonts", {maxAge: cacheAge}));
+["css", "js", "fonts"].forEach(value => app.use("/" + value, express.static("./" + value, {maxAge: cacheAge})));
 app.set("view engine", "pug");
 app.use(expressSession({
 	store: new (betterSqlite3SessionStore(expressSession))({
@@ -578,14 +265,16 @@ app.get("/logout", (req, res) => {
 
 // users
 app.get("/users", (req, res) => res.render("users", {
-	users: User.getAll()
+	users: getAllUsers()
 }));
+
+// redirect the user to their own page
 app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.user.id : "/"));
 app.get("/users/:id", (req, res) => {
 	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
 	try {
 		res.render("user", {
-			user: User.getById(req.params.id),
+			user: getUserById(req.params.id),
 			cohorts: []
 		});
 	} catch(e) {
@@ -593,17 +282,9 @@ app.get("/users/:id", (req, res) => {
 	}
 });
 
-app.get("/project/:id", (req, res) => {
-	res.render("projectoverview", {
-		id: req.params.id
-	})
-});
-
-app.get("/selectpathways", (req, res) => res.send("/selectpathways"));
-
 /* cohorts */
 
-app.get("/cohorts", (req, res) => res.render("cohorts", {cohorts: Cohort.getAll()}));
+app.get("/cohorts", (req, res) => res.render("cohorts", {cohorts: getAllCohorts()}));
 app.get("/cohorts/new", (req, res) => {
 	res.render("cohorts-new");
 });
@@ -734,6 +415,15 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 	} else {
 		res.send("hmm. that didnt work. something is very wrong");
 	}
+
+	/*
+	source vertex
+	edge from source to each student (cap: 1, cost: 0)
+	edge from student to each pp (cap: 1, cost: dependant)
+	edge from pp to supervisor (cap: 1, cost: 0)
+	edge from supervisor to sink (cap: dependant, cost: 0)
+	sink vertex
+	*/
 });
 
 app.get("/api/student-search", (req, res) => {
@@ -751,14 +441,11 @@ app.get("/api/add-student-to-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		console.log(req.query);
 		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsStudents(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring, pathwayId) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0, NULL)"); // TODO: check for SQL injection
 		stmt.run(req.query.cohortId, req.query.studentId);
 		res.sendStatus(200);
 	}
 });
-
-app.get("/myprojectproposals", (req, res) => res.send("myprojectproposals"));
 
 app.use("/uploads", express.static("./uploads"));
 app.post("/projectproposal/new", (req, res) => {
@@ -798,7 +485,7 @@ app.get("/api/tag-search", (req, res) => {
 
 app.get("/pathways", (req, res) => res.render("pathways", {
 	user: req.session.user,
-	pathways: Pathway.getAll()
+	pathways: getAllPathways()
 }));
 app.get("/pathways/new", (req, res) => res.render("pathways-new"));
 app.post("/pathways/new", (req, res) => {
@@ -869,11 +556,11 @@ app.get("/pathways/:id", (req, res) => {
 			}
 
 			let supervisors = [];
-			let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN users ON supervisorsPathways.supervisorId = users.id");
-			console.log(supervisorsStmt.all());
-
+			// TODO:
+			// let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN users ON supervisorsPathways.supervisorId = users.id");
+			
 			res.render("pathway", {
-				pathway: Pathway.getById(pathwayId),
+				pathway: getPathwayById(pathwayId),
 				projectProposals: projectProposals,
 				cohorts: cohorts,
 				supervisors: supervisors
@@ -900,7 +587,7 @@ app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 		let choices = [choice1, choice2, choice3];
 
 		res.render("pathway-projectproposals", {
-			pathway: Pathway.getById(pathwayId),
+			pathway: getPathwayById(pathwayId),
 			projectProposals: projectProposals,
 			choices: choices
 		});
@@ -911,30 +598,30 @@ app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 	}
 });
 
+// TODO: this assumes that each student is only in one cohort. need to get the cohort from the req
+// TODO: this should return some json rather than use HTTP response codes
 app.post("/api/projectSelection/new", (req, res) => {
 	let projectId = req.body.projectId;
 	
 	let getCS = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
-	let rowCS = getCS.get(req.session.user.id);
-	let cS = new CohortStudent(rowCS.cohortId, rowCS.studentId, rowCS.choice1, rowCS.choice2, rowCS.choice3, rowCS.assignedChoice, rowCS.doneChoosing, rowCS.projectId, rowCS.deferring, rowCS.pathwayId);
+	let cS = getCS.get(req.session.user.id);
 
-	if (cS.getChoice1() == null) {
+	if(cS.choice1 == null) {
 		let choice1Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice1 = ? WHERE studentId = ?");
-		choice1Stmt.run(projectId, cS.getStudent());
+		choice1Stmt.run(projectId, cS.studentId);
 		res.sendStatus(200);
-	}
-	else if (cS.getChoice2() == null) {
+	} else if(cS.choice2 == null) {
 		let choice2Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice2 = ? WHERE studentId = ?");
-		choice2Stmt.run(projectId, cS.getStudent());
+		choice2Stmt.run(projectId, cS.studentId);
 		res.sendStatus(200);
-	}
-	else if (cS.getChoice3() == null) {
+	} else if(cS.choice3 == null) {
 		let choice3Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice3 = ? WHERE studentId = ?");
-		choice3Stmt.run(projectId, cS.getStudent());
+		choice3Stmt.run(projectId, cS.studentId);
 		res.sendStatus(200);
 	}
 });
 
+// TODO: this removes choices for every cohort for that student
 app.post("/api/projectSelection/remove", (req, res) => {
 	if (req.body.choiceId == 1) {
 		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice1 = null WHERE studentId = ?");
@@ -993,7 +680,7 @@ app.get("/projectproposals", (req, res) => {
 	});
 });
 app.get("/projectproposals/new", (req, res) => {
-	res.render("projectproposals-new", {pathways: Pathway.getAll()});
+	res.render("projectproposals-new", {pathways: getAllPathways()});
 });
 app.post("/api/projectproposals/upload", (req, res) => {
 	let title = req.body.title;
@@ -1048,7 +735,7 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	res.send(JSON.stringify(projectProposal.id));
 });
 app.get("/projectproposals/:id", (req, res) => {
-	res.render("projectproposal", {projectProposal: ProjectProposal.getById(req.params.id)});
+	res.render("projectproposal", {projectProposal: getProjectProposalById(req.params.id)});
 });
 app.get("/api/projectproposals/:projectProposalId/approve", (req, res) => {
 	res.setHeader("Content-Type", "application/json");
@@ -1061,7 +748,7 @@ app.get("/api/projectproposals/:projectProposalId/approve", (req, res) => {
 	}
 });
 
-app.get("/markschemes", (req, res) => res.render("markschemes", {markschemes: MarkScheme.getAll()}));
+app.get("/markschemes", (req, res) => res.render("markschemes", {markschemes: getAllMarkSchemes()}));
 app.get("/markschemes/new", (req, res) => res.render("markschemes-new"));
 app.post("/api/markschemes/new", (req, res) => {
 	let name = req.body.name;
@@ -1086,10 +773,9 @@ app.post("/api/markschemes/new", (req, res) => {
 		markSchemeId: markSchemeId
 	}));
 });
-app.get("/markschemes/:id", (req, res) => {
-	let markScheme = MarkScheme.getById(req.params.id);
-	res.render("markscheme", {markScheme: markScheme});
-});
+app.get("/markschemes/:id", (req, res) => res.render("markscheme", {
+	markScheme: getMarkSchemeById(req.params.id)
+}));
 
 // modules
 app.get("/modules", (req, res) => {
@@ -1135,13 +821,15 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	if(User.getById(req.session.user.id).getIsStudent()) {
+	if(req.session.user.isStudent) {
 		try {
 			let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 			let row1 = stmt1.get(parseInt(req.session.user.id));
-			let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
-			if (cS.getDoneChoosing()){
-				res.render("studentoverview", {user: User.getById(req.session.user.id), project: Project.getById(cS.getProject())});
+			if (row1.doneChoosing){
+				res.render("studentoverview", {
+					user: getUserById(req.session.user.id),
+					project: getProjectById(row1.projectId)
+				});
 			}
 			else{
 				res.redirect("/pathways");
@@ -1153,7 +841,7 @@ app.get("/overview", (req, res) => {
 	} else {
 		// TODO: fix cohorts
 		res.render("overview", {
-			user: User.getById(req.session.user.id),
+			user: getUserById(req.session.user.id),
 			cohorts: []
 		});
 	}
@@ -1164,10 +852,9 @@ app.get("/overview", (req, res) => {
 		if(req.session.user.isStudent){
 			let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
 			let row1 = stmt1.get(req.session.user.id);
-			let cS = new CohortStudent(row1.cohortId, row1.studentId, row1.choice1, row1.choice2, row1.choice3, row1.assignedChoice, row1.doneChoosing, row1.projectId, row1.deferring, row1.pathwayId);
-			let project = Project.getById(cS.getProject());
+			let project = getProjectById(row1.projectId);
 			let stmt2 = db.prepare("UPDATE OR IGNORE projects SET " + e + "Link = ? WHERE id = ?");
-			stmt2.run(req.body[e + "Link"], project.getId());
+			stmt2.run(req.body[e + "Link"], project.id);
 		}
 		res.redirect("/overview");
 	});
