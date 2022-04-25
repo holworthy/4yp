@@ -42,8 +42,8 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS supervisorsPathways (supervisorId INTEGER, pathwayId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS deliverable (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, weighting INTEGER, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
-db.exec("CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
+db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, weighting INTEGER, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 
 // db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, maxNumToSupervise, isAdmin, isStudent, isSupervisor, isHubstaff) VALUES ()");
@@ -172,6 +172,16 @@ function getProjectProposalById(projectProposalId) {
 
 	let stmt = db.prepare("SELECT * FROM projectProposals WHERE id = ?");
 	return stmt.get(projectProposalId);
+}
+
+function getDeliverableById(deliverableId) {
+	let stmt = db.prepare("SELECT * FROM deliverables WHERE id = ?");
+	return stmt.get(deliverableId);
+}
+
+function getDeliverablesByPathwayId(pathwayId) {
+	let stmt = db.prepare("SELECT * FROM deliverables WHERE pathwayId = ?");
+	return stmt.all(pathwayId);
 }
 
 // web server
@@ -600,6 +610,26 @@ app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 		console.log(e);
 		res.redirect("/pathways");
 	}
+});
+app.get("/pathways/:pathwayId/deliverables", (req, res) => {
+	res.render("pathway-deliverables", {
+		pathway: getPathwayById(req.params.pathwayId),
+		deliverables: getDeliverablesByPathwayId(req.params.pathwayId)
+	});
+});
+app.get("/pathways/:pathwayId/deliverables/new", (req, res) => {
+	res.render("pathway-deliverables-new");
+});
+app.post("/pathways/:pathwayId/deliverables/new", (req, res) => {
+	let stmt = db.prepare("INSERT INTO deliverables (pathwayId, name, weighting, type) VALUES (?, ?, ?, ?)");
+	let result = stmt.run(req.params.pathwayId, req.body.name, req.body.weighting, 0);
+	res.redirect("/pathways/"+req.params.pathwayId+"/deliverables/" + result.lastInsertRowid);
+});
+app.get("/pathways/:pathwayId/deliverables/:deliverableId", (req, res) => {
+	res.render("pathway-deliverable", {
+		pathway: getPathwayById(req.params.pathwayId),
+		deliverable: getDeliverableById(req.params.deliverableId)
+	});
 });
 
 // TODO: this assumes that each student is only in one cohort. need to get the cohort from the req

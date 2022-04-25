@@ -1,0 +1,12 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Deliverables
+			each deliverable in deliverables
+				div
+					p #{deliverable.name}
+					p #{deliverable.weighting}

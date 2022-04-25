@@ -60,3 +60,8 @@ html(lang="en")
 									p #{JSON.stringify(supervisor)}
 						else
 							p No one is moderating this pathway yet!
+				details(open)
+					summary
+						h3 Deliverables
+					div
+						a(href="/pathways/"+pathway.id+"/deliverables/new") Create Deliverable
