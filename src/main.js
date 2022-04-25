@@ -33,7 +33,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, student
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 
-db.exec("CREATE TABLE IF NOT EXISTS cohortsStudents (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
+db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
 
 db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, code TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS prerequisites (projectProposalId INTEGER, moduleId INTEGER, UNIQUE(projectProposalId, moduleId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
@@ -41,6 +41,10 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 
 db.exec("CREATE TABLE IF NOT EXISTS supervisorsPathways (supervisorId INTEGER, pathwayId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
+
+db.exec("CREATE TABLE IF NOT EXISTS deliverable (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, weighting INTEGER, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
+db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 
 // db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, maxNumToSupervise, isAdmin, isStudent, isSupervisor, isHubstaff) VALUES ()");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
@@ -55,7 +59,7 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
-// db.exec("UPDATE OR IGNORE cohortsStudents SET doneChoosing = 1 WHERE studentId = 5");
+// db.exec("UPDATE OR IGNORE cohortsMemberships SET doneChoosing = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 
@@ -67,7 +71,7 @@ db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, ar
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
 // db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
 
-// db.exec("UPDATE OR IGNORE cohortsStudents SET projectid = 1 WHERE studentId = 5");
+// db.exec("UPDATE OR IGNORE cohortsMemberships SET projectid = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
@@ -148,7 +152,7 @@ function getProjectById(projectId) {
 }
 
 function getCohortMembershipByCohortIdAndStudentId(cohortId, studentId) {
-	let stmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ? AND studentId = ?");
+	let stmt = db.prepare("SELECT * FROM cohortsMemberships WHERE cohortId = ? AND studentId = ?");
 	return stmt.get(cohortId, studentId);
 }
 
@@ -271,7 +275,7 @@ app.get("/users", (req, res) => res.render("users", {
 // redirect the user to their own page
 app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.user.id : "/"));
 app.get("/users/:id", (req, res) => {
-	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsStudents ON cohortsStudents.studentId = users.id INNER JOIN projects ON cohortsStudents.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
+	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsMemberships ON cohortsMemberships.studentId = users.id INNER JOIN projects ON cohortsMemberships.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
 	try {
 		res.render("user", {
 			user: getUserById(req.params.id),
@@ -313,7 +317,7 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
 		let cohort = cohortStmt.get(req.params.cohortId);
 
-		let cohortStudentsStmt = db.prepare("SELECT cohortsStudents.*, cohortsStudents.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle FROM cohortsStudents LEFT JOIN users ON cohortsStudents.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsStudents.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsStudents.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsStudents.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsStudents.assignedChoice = p4.id WHERE cohortId = ?");
+		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id WHERE cohortId = ?");
 		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId); 
 
 		res.render("cohort", {
@@ -325,7 +329,7 @@ app.get("/cohorts/:cohortId", (req, res) => {
 	}
 });
 app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
-	let cohortStudentsStmt = db.prepare("SELECT * FROM cohortsStudents WHERE cohortId = ?");
+	let cohortStudentsStmt = db.prepare("SELECT * FROM cohortsMemberships WHERE cohortId = ?");
 	let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
 
 	let projectProposalsStmt = db.prepare("SELECT * FROM projectProposals");
@@ -406,7 +410,7 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 	let result = backtrack(0);
 	if(result) {
 		for(let j = 0; j < cohortStudents.length; j++) {
-			let stmt = db.prepare("UPDATE cohortsStudents SET assignedChoice = ? WHERE cohortId = ? AND studentId = ?");
+			let stmt = db.prepare("UPDATE cohortsMemberships SET assignedChoice = ? WHERE cohortId = ? AND studentId = ?");
 			stmt.run(cohortStudents[j].assignedChoice, cohortStudents[j].cohortId, cohortStudents[j].studentId);
 
 			// TODO: verify that this ran successfully
@@ -441,7 +445,7 @@ app.get("/api/add-student-to-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsStudents(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring, pathwayId) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0, NULL)"); // TODO: check for SQL injection
+		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsMemberships(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring, pathwayId) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0, NULL)"); // TODO: check for SQL injection
 		stmt.run(req.query.cohortId, req.query.studentId);
 		res.sendStatus(200);
 	}
@@ -517,7 +521,7 @@ app.get("/pathways/:id", (req, res) => {
 			let projectProposals = projectProposalsStmt.all(pathwayId);
 			
 			let cohorts = [];
-			let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsStudents INNER JOIN cohorts ON cohortsStudents.cohortId = cohorts.id INNER JOIN users ON cohortsStudents.studentId = users.id WHERE pathwayId = ?");
+			let stmt = db.prepare("SELECT *, cohorts.name AS cohortName, users.name AS userName FROM cohortsMemberships INNER JOIN cohorts ON cohortsMemberships.cohortId = cohorts.id INNER JOIN users ON cohortsMemberships.studentId = users.id WHERE pathwayId = ?");
 			let rows = stmt.all(pathwayId);
 			for(let i = 0; i < rows.length; i++) {
 				let row = rows[i];
@@ -578,7 +582,7 @@ app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
 		let projectProposals = projectProposalsStmt.all(pathwayId);
 
-		let getCS = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+		let getCS = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
 		let rowCS = getCS.get(req.session.user.id);
 
 		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice1); 
@@ -603,19 +607,19 @@ app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 app.post("/api/projectSelection/new", (req, res) => {
 	let projectId = req.body.projectId;
 	
-	let getCS = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+	let getCS = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
 	let cS = getCS.get(req.session.user.id);
 
 	if(cS.choice1 == null) {
-		let choice1Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice1 = ? WHERE studentId = ?");
+		let choice1Stmt = db.prepare("UPDATE OR IGNORE cohortsMemberships SET choice1 = ? WHERE studentId = ?");
 		choice1Stmt.run(projectId, cS.studentId);
 		res.sendStatus(200);
 	} else if(cS.choice2 == null) {
-		let choice2Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice2 = ? WHERE studentId = ?");
+		let choice2Stmt = db.prepare("UPDATE OR IGNORE cohortsMemberships SET choice2 = ? WHERE studentId = ?");
 		choice2Stmt.run(projectId, cS.studentId);
 		res.sendStatus(200);
 	} else if(cS.choice3 == null) {
-		let choice3Stmt = db.prepare("UPDATE OR IGNORE cohortsStudents SET choice3 = ? WHERE studentId = ?");
+		let choice3Stmt = db.prepare("UPDATE OR IGNORE cohortsMemberships SET choice3 = ? WHERE studentId = ?");
 		choice3Stmt.run(projectId, cS.studentId);
 		res.sendStatus(200);
 	}
@@ -624,17 +628,17 @@ app.post("/api/projectSelection/new", (req, res) => {
 // TODO: this removes choices for every cohort for that student
 app.post("/api/projectSelection/remove", (req, res) => {
 	if (req.body.choiceId == 1) {
-		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice1 = null WHERE studentId = ?");
+		let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice1 = null WHERE studentId = ?");
 		choiceStmt.run(req.session.user.id);
 		res.sendStatus(200);
 	}
 	else if (req.body.choiceId == 2) {
-		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice2 = null WHERE studentId = ?");
+		let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice2 = null WHERE studentId = ?");
 		choiceStmt.run(req.session.user.id);
 		res.sendStatus(200);
 	}
 	else if (req.body.choiceId == 3) {
-		let choiceStmt = db.prepare("UPDATE cohortsStudents SET choice3 = null WHERE studentId = ?");
+		let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice3 = null WHERE studentId = ?");
 		choiceStmt.run(req.session.user.id);
 		res.sendStatus(200);
 	}
@@ -642,30 +646,30 @@ app.post("/api/projectSelection/remove", (req, res) => {
 
 app.post("/api/projectSelection/swap", (req, res) => {
 	if (req.body.fromId == 0)
-		from = db.prepare("SELECT choice1 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice1;
+		from = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice1;
 	else if (req.body.fromId == 1)
-		from = db.prepare("SELECT choice2 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice2;
+		from = db.prepare("SELECT choice2 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice2;
 	else
-		from = db.prepare("SELECT choice3 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice3;
+		from = db.prepare("SELECT choice3 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice3;
 	console.log(from);
 	if (req.body.toId == 0) {
-		to = db.prepare("SELECT choice1 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice1;
-		db.prepare("UPDATE cohortsStudents SET choice1 = ? WHERE studentId = ?").run(from, req.session.user.id);
+		to = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice1;
+		db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ?").run(from, req.session.user.id);
 	}
 	else if (req.body.toId == 1) {
-		to = db.prepare("SELECT choice2 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice2;
-		db.prepare("UPDATE cohortsStudents SET choice2 = ? WHERE studentId = ?").run(from, req.session.user.id);
+		to = db.prepare("SELECT choice2 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice2;
+		db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ?").run(from, req.session.user.id);
 	}
 	else{
-		to = db.prepare("SELECT choice3 FROM cohortsStudents WHERE studentId = ?").get(req.session.user.id).choice3;
-		db.prepare("UPDATE cohortsStudents SET choice3 = ? WHERE studentId = ?").run(from, req.session.user.id);
+		to = db.prepare("SELECT choice3 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice3;
+		db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ?").run(from, req.session.user.id);
 	}
 	if (req.body.fromId == 0)
-		db.prepare("UPDATE cohortsStudents SET choice1 = ? WHERE studentId = ?").run(to, req.session.user.id);
+		db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ?").run(to, req.session.user.id);
 	else if (req.body.fromId == 1)
-		db.prepare("UPDATE cohortsStudents SET choice2 = ? WHERE studentId = ?").run(to, req.session.user.id);
+		db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ?").run(to, req.session.user.id);
 	else
-		db.prepare("UPDATE cohortsStudents SET choice3 = ? WHERE studentId = ?").run(to, req.session.user.id);
+		db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ?").run(to, req.session.user.id);
 });
 
 app.get("/projectproposals", (req, res) => {
@@ -823,7 +827,7 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 app.get("/overview", (req, res) => {
 	if(req.session.user.isStudent) {
 		try {
-			let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+			let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
 			let row1 = stmt1.get(parseInt(req.session.user.id));
 			if (row1.doneChoosing){
 				res.render("studentoverview", {
@@ -850,7 +854,7 @@ app.get("/overview", (req, res) => {
 ["github", "overleaf"].forEach(e => {
 	app.post("/overview/" + e, (req, res) => {
 		if(req.session.user.isStudent){
-			let stmt1 = db.prepare("SELECT * FROM cohortsStudents WHERE studentId = ?");
+			let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
 			let row1 = stmt1.get(req.session.user.id);
 			let project = getProjectById(row1.projectId);
 			let stmt2 = db.prepare("UPDATE OR IGNORE projects SET " + e + "Link = ? WHERE id = ?");
