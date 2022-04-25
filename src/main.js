@@ -902,4 +902,8 @@ app.get("/overview", (req, res) => {
 
 app.use("/media", express.static("./media"));
 
+app.get("/marking", (req, res) => {
+	res.render("marking");
+});
+
 app.listen(8080);

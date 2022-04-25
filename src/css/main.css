@@ -55,6 +55,12 @@ main {
 	padding: 1rem;
 }
 
+main.fullwidth {
+	width: auto;
+	margin-left: 1rem;
+	margin-right: 1rem;
+}
+
 .white {
 	background-color: #fff;
 }
@@ -491,4 +497,17 @@ progress {
 	justify-content: space-between;
 	padding: 15px;
 	flex: 1;
+}
+
+.split {
+	display: flex;
+}
+
+.split > * {
+	flex: 1;
+}
+
+.split iframe {
+	width: 100%;
+	height: 80vh;
 }
