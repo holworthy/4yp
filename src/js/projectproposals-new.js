@@ -1,4 +1,9 @@
+let tagIds = [];
+
 function deleteTag(tagElement) {
+	for (let i = 0; i < tagIds.length; i++)
+		if (tagIds[i] == tagElement.parentElement.dataset.tagId)
+			tagIds.splice(i, 1);
 	tagElement.parentElement.remove();
 	let tagsDiv = document.getElementById("tags");
 	tagsDiv.dataset.currentTagsNum -= 1;
@@ -44,7 +49,9 @@ window.addEventListener("load", () => {
 
 	let tagNameInput = document.getElementById("tag-name-input");
 	let tagBox = document.getElementById("tag-box");
-	tagNameInput.addEventListener("keyup", () => {
+	tagNameInput.addEventListener("keyup", () => tagNameInputEvent());
+
+	function tagNameInputEvent(){
 		let name = tagNameInput.value;
 
 		let xhr = new XMLHttpRequest();
@@ -85,15 +92,23 @@ window.addEventListener("load", () => {
 					let tagsLabel = document.getElementById("tagsLabel");
 					if (tagsLabel.style.display == "none")
 						tagsLabel.style.display = "inline";
-					
+					tagIds.push(tags[i].id);
+					tagNameInputEvent();
 				});
-
 				tagBox.append(tagDiv);
 			}
 		});
-		xhr.open("GET", "/api/tag-search?name=" + encodeURIComponent(name));
-		xhr.send();
-	});
+		
+		xhr.open("POST", "/api/tag-search?name=" + encodeURIComponent(name));
+		xhr.setRequestHeader("Content-Type", "application/json");
+		xhr.addEventListener("load", () => {
+			
+		});
+		xhr.addEventListener("error", () => {
+			console.log("Error");
+		});
+		xhr.send(JSON.stringify(tagIds));
+	}
 
 	createButton.addEventListener("click", e => {
 		e.preventDefault();

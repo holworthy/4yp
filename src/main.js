@@ -486,13 +486,19 @@ app.post("/projectproposal/new", (req, res) => {
 	}
 });
 
-app.get("/api/tag-search", (req, res) => {
+app.post("/api/tag-search", (req, res) => {
 	res.setHeader("Content-Type", "application/json");
 	// TODO: permission check here too
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT id, name FROM tags where tags.name LIKE '%' || ? || '%' LIMIT 5");
+		tagIds = req.body;
+		strStmt = "SELECT id, name FROM tags where tags.name LIKE '%' || ? || '%'";
+		for (let i = 0; i < tagIds.length; i ++)
+			strStmt += " AND NOT id = "+tagIds[i];
+		strStmt += " LIMIT 5";
+		console.log(strStmt);
+		let stmt = db.prepare(strStmt);
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
 });
