@@ -39,7 +39,7 @@ db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMEN
 db.exec("CREATE TABLE IF NOT EXISTS prerequisites (projectProposalId INTEGER, moduleId INTEGER, UNIQUE(projectProposalId, moduleId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId INTEGER, UNIQUE(studentId, moduleId), FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS supervisorsPathways (supervisorId INTEGER, pathwayId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS pathwaysSupervisors (pathwayId INTEGER, supervisorId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, weighting INTEGER, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
@@ -285,11 +285,13 @@ app.get("/users", (req, res) => res.render("users", {
 // redirect the user to their own page
 app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.user.id : "/"));
 app.get("/users/:id", (req, res) => {
-	let stmt = db.prepare("SELECT * FROM users INNER JOIN cohortsMemberships ON cohortsMemberships.studentId = users.id INNER JOIN projects ON cohortsMemberships.projectId = projects.id INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE users.id = ?");
+	let cohortsStmt = db.prepare("SELECT * FROM cohorts INNER JOIN cohortsMemberships ON cohorts.id = cohortsMemberships.cohortId WHERE cohortsMemberships.studentId = ?");
+	let cohorts = cohortsStmt.all(req.params.id);
+	
 	try {
 		res.render("user", {
 			user: getUserById(req.params.id),
-			cohorts: []
+			cohorts: cohorts
 		});
 	} catch(e) {
 		res.redirect("/users");
