@@ -26,7 +26,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INT
 db.exec("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTEGER, tagId INTEGER, UNIQUE (projectProposalId, tagId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (tagId) REFERENCES tags(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER)");
+db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()))");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES project(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES student(id) ON DELETE RESTRICT)");
@@ -121,6 +121,11 @@ function getMarkSchemePartById(markSchemePartId) {
 	return stmt.all(markSchemePartId);
 }
 
+function getMarkschemePartsByMarkshemeId(markschemeId) {
+	let stmt = db.prepare("SELECT * FROM markschemesParts WHERE markschemeId = ?");
+	return stmt.all(markschemeId);
+}
+
 function getTagById(tagId) {
 	let stmt = db.prepare("SELECT * FROM tags WHERE id = ?");
 	return stmt.get(tagId);
@@ -134,6 +139,11 @@ function getCohortById(cohortId) {
 function getAllCohorts() {
 	let stmt = db.prepare("SELECT * FROM cohorts");
 	return stmt.all();
+}
+
+function getCohortsAndCohortsMembershipByStudentId(studentId) {
+	let cohortsStmt = db.prepare("SELECT * FROM cohorts INNER JOIN cohortsMemberships ON cohorts.id = cohortsMemberships.cohortId WHERE cohortsMemberships.studentId = ?");
+	return cohortsStmt.all(studentId);
 }
 
 function getPathwayById(pathwayId) {
@@ -285,13 +295,10 @@ app.get("/users", (req, res) => res.render("users", {
 // redirect the user to their own page
 app.get("/users/me", (req, res) => res.redirect(req.session.loggedIn ? "/users/" + req.session.user.id : "/"));
 app.get("/users/:id", (req, res) => {
-	let cohortsStmt = db.prepare("SELECT * FROM cohorts INNER JOIN cohortsMemberships ON cohorts.id = cohortsMemberships.cohortId WHERE cohortsMemberships.studentId = ?");
-	let cohorts = cohortsStmt.all(req.params.id);
-	
 	try {
 		res.render("user", {
 			user: getUserById(req.params.id),
-			cohorts: cohorts
+			cohorts: getCohortsAndCohortsMembershipByStudentId(req.params.id)
 		});
 	} catch(e) {
 		res.redirect("/users");
@@ -300,7 +307,12 @@ app.get("/users/:id", (req, res) => {
 
 /* cohorts */
 
-app.get("/cohorts", (req, res) => res.render("cohorts", {cohorts: getAllCohorts()}));
+app.get("/cohorts", (req, res) => {
+	let stmt = db.prepare("SELECT *, COUNT(cohortsMemberships.cohortId) AS numStudents FROM cohorts LEFT JOIN cohortsMemberships ON cohorts.id = cohortsMemberships.cohortId GROUP BY cohorts.id");
+	res.render("cohorts", {
+		cohorts: stmt.all()
+	})
+});
 app.get("/cohorts/new", (req, res) => {
 	res.render("cohorts-new");
 });
@@ -863,30 +875,29 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	if(req.session.user.isStudent) {
-		try {
-			let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-			let row1 = stmt1.get(parseInt(req.session.user.id));
-			if (row1.doneChoosing){
-				res.render("studentoverview", {
-					user: getUserById(req.session.user.id),
-					project: getProjectById(row1.projectId)
-				});
-			}
-			else{
-				res.redirect("/pathways");
-			}
-		}
-		catch {
-			res.redirect("/pathways");
-		}
-	} else {
-		// TODO: fix cohorts
+	// if(req.session.user.isStudent) {
+	// 	try {
+	// 		let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
+	// 		let row1 = stmt1.get(parseInt(req.session.user.id));
+	// 		if (row1.doneChoosing){
+	// 			res.render("studentoverview", {
+	// 				user: getUserById(req.session.user.id),
+	// 				project: getProjectById(row1.projectId)
+	// 			});
+	// 		}
+	// 		else{
+	// 			res.redirect("/pathways");
+	// 		}
+	// 	}
+	// 	catch {
+	// 		res.redirect("/pathways");
+	// 	}
+	// } else {
 		res.render("overview", {
 			user: getUserById(req.session.user.id),
-			cohorts: []
+			cohorts: getCohortsAndCohortsMembershipByStudentId(req.session.user.id)
 		});
-	}
+	// }
 });
 
 ["github", "overleaf"].forEach(e => {
@@ -905,7 +916,10 @@ app.get("/overview", (req, res) => {
 app.use("/media", express.static("./media"));
 
 app.get("/marking", (req, res) => {
-	res.render("marking");
+	res.render("marking", {
+		markscheme: getMarkSchemeById(1),
+		markschemeParts: getMarkschemePartsByMarkshemeId(1)
+	});
 });
 
 app.listen(8080);

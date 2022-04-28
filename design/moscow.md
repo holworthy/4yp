@@ -4,7 +4,7 @@
 
 - [ ] Allow moderators to select which pathways they can moderate
 - [x] Get projects from supervisors
-- [ ] Allow admins to approve or deny projects
+- [x] Allow admins to approve or deny projects
 - [ ] Limit how many projects supervisors can supervise
 - [ ] Limit how many students can do a project
 - [x] Allow students to pick 3 projects
@@ -26,10 +26,10 @@
 
 - [x] Look nice
 - [x] Allow admins to create pathways
-- [ ] Mixed media in project proposals
+- [x] Mixed media in project proposals
 	- [ ] Videos
-	- [ ] Images
-	- [ ] Links
+	- [x] Images
+	- [x] Links
 - [ ] Emails for students on year in industry
 	- [ ] Same for intercalated
 - [x] Project genres/tags

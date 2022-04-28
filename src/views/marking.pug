@@ -7,6 +7,28 @@ html(lang="en")
 		main.fullwidth
 			.split
 				div
-					p Cool marking stuff goes here
+					h2 Marking
+
+					p #{markscheme.name}
+
+					table.equal
+						thead
+							tr
+								th Name
+								th Mark
+						tbody
+							each part in markschemeParts
+								tr
+									td #{part.name}
+									td.inline
+										p 
+											input(type="text", name="")
+											| /#{part.weight}
+							if markschemeParts.length == 0
+								tr
+									td(colspan="2") No parts in this markscheme
+
+					input.m1-top(type="submit", value="Submit Marking")
+
 				div
-					iframe(src="/uploads/pdf.pdf", frameborder="0") 
+					iframe(src="/uploads/pdf.pdf", frameborder="0")
