@@ -454,6 +454,7 @@ app.get("/cohorts/:cohortId/createprojects", (req, res) => {
 			for (let j =0; j < supervisorId; j++){
 				db.prepare("INSERT INTO projectsSupervisors(projectId, supervisorId) VALUES (?, ?)").run(projId, supervisorId[i].supervisorId);
 			}
+			db.prepare("UPDATE cohortsMemberships SET projectId = ? WHERE cohortId = ? AND studentId = ?").run(projId, cohortId, studentIds[i].studentId);
 		}
 		res.redirect("/cohorts/" + cohortId);
 	 

@@ -46,7 +46,7 @@ html(lang="en")
 									else
 										a(href="/cohorts/" + cohort.id + "/students/" + student.studentId) Manually Assign 
 								td #{student.doneChoosing ? "Yes" : "No"}
-								td #{student.project ? student.project : "Not yet created"}
+								td #{student.projectId ? student.projectId : "Not yet created"}
 								td #{student.deferring ? "Yes" : "No"}
 								td #{student.pathway}
 								td
