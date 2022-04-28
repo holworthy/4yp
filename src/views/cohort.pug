@@ -63,5 +63,9 @@ html(lang="en")
 
 			.m2-top
 				h2 Assign Projects
-				p WARNING: THIS ACTION IS NOT REVERSIBLE!
+				p.red-text WARNING: THIS ACTION IS NOT REVERSIBLE!
 				a(href="/cohorts/" + cohort.id + "/assignprojects") Assign Projects
+
+			.m2-top 
+				h2 Create Projects
+				a(href="/cohorts/" + cohort.id + "/createprojects") Create Projects

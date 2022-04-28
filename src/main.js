@@ -29,7 +29,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTE
 db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()))");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT)");
-db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES project(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES student(id) ON DELETE RESTRICT)");
+db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 
@@ -452,6 +452,23 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 	edge from supervisor to sink (cap: dependant, cost: 0)
 	sink vertex
 	*/
+});
+
+app.get("/cohorts/:cohortId/createprojects", (req, res) => {
+	
+		let cohortId = req.params.cohortId;
+		let studentIds = db.prepare("SELECT studentId FROM cohortsMemberships WHERE cohortId = ? AND (assignedChoice IS NOT NULL OR assignedChoice = '');").all(cohortId);
+		for (let i = 0; i < studentIds.length; i++) {
+			let assignedChoiceId = db.prepare("SELECT assignedChoice FROM cohortsMemberships WHERE cohortId = ? AND studentId = ?").get(cohortId, studentIds[i].studentId);
+			let projId = db.prepare("INSERT INTO projects(projectProposalId) VALUES (?)").run(assignedChoiceId.assignedChoice).lastInsertRowid;
+			db.prepare("INSERT INTO projectsStudents(projectId, studentId) VALUES (?, ?)").run(projId, studentIds[i].studentId);
+			let supervisorId = db.prepare("SELECT supervisorId FROM projectProposalsSupervisors WHERE projectProposalId = ?").get(assignedChoiceId.assignedChoice);
+			for (let j =0; j < supervisorId; j++){
+				db.prepare("INSERT INTO projectsSupervisors(projectId, supervisorId) VALUES (?, ?)").run(projId, supervisorId[i].supervisorId);
+			}
+		}
+		res.redirect("/cohorts/" + cohortId);
+	 
 });
 
 app.get("/api/student-search", (req, res) => {
