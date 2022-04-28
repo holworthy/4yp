@@ -507,11 +507,31 @@ progress {
 	display: flex;
 }
 
-.split > * {
+.split > div {
 	flex: 1;
+}
+
+.split > div:first-child {
+	margin-right: 0.5rem;
+}
+
+.split > div:last-child {
+	margin-left: 0.5rem;
 }
 
 .split iframe {
 	width: 100%;
 	height: 80vh;
+}
+
+table.equal {
+	table-layout: fixed;
+}
+
+td.inline * {
+	display: inline;
+}
+
+td.inline input {
+	width: auto;
 }

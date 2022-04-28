@@ -6,34 +6,38 @@ html(lang="en")
 		include includes/header.pug
 		main
 			h2 Hello, #{user.nickname}
-			p Things you can do:
-
-			div
-				h3 Admin Things
-				a(href="/users") View all users
-				a(href="/users/me") View yourself  
-				a.m1-top(href="/pathways") View pathways
-				a(href="/pathways/new") Create a pathway
-				a.m1-top(href="/cohorts") View cohorts
-				a(href="/cohorts/new") Create a cohort
-				a.m1-top(href="/projectproposals") View project proposals
-				a(href="#") Approve project proposals
-				a.m1-top(href="/markschemes") View Markschemes
-				a(href="/markschemes/new") Create a markscheme
-				a.m1-top(href="/modules") View modules
-				a(href="/modules/new") Create a module 
-
-			div
-				h3 Student Things
-				a(href="/projectproposals") Select a project
-				h4 My Cohorts
+			h3.m1-top Things you can do...
+			if user.isStudent
 				each cohort in cohorts
-					div
-						a(href="/cohorts/" + cohort.id) #{cohort.name}
+					if !cohort.isDoneChoosing
+						p.m1-top Make your project choices for this cohort:
+						a(href="/cohorts/"+cohort.id)  #{cohort.name}
 
-			div
-				h3 Supervisor Things
+				h3.m1-top What cohorts am I enrolled in?
+				each cohort in cohorts
+					a(href="/cohorts/"+cohort.id)  #{cohort.name}
+
+				h3.m1-top What projects am I involved in?
+				p Coming soon
+				//- each project in projects
+				//- 	a(href="/projects/"+project.id)  #{project.id}
+
+			if user.isSupervisor
+				h3.m1-top Create a project proposal
 				a(href="/projectproposals/new") Create a project proposal 
 
-			div
-				h3 Hubstaff Things
+			if user.isHubstaff
+
+			if user.isAdmin
+				a(href="/users") View all users
+				a(href="/users/me") View yourself  
+				a(href="/pathways") View pathways
+				a(href="/pathways/new") Create a pathway
+				a(href="/cohorts") View cohorts
+				a(href="/cohorts/new") Create a cohort
+				a(href="/projectproposals") View project proposals
+				a(href="#") Approve project proposals
+				a(href="/markschemes") View Markschemes
+				a(href="/markschemes/new") Create a markscheme
+				a(href="/modules") View modules
+				a(href="/modules/new") Create a module 
