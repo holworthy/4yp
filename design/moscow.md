@@ -40,7 +40,8 @@
 
 ## Could
 
-- [ ] Giving projects tags so students can search them eaiser
+- [x] Giving projects tags so students can search them eaiser
+- [ ] Allow Media to embed in project description
 - [ ] Sort admin data views however they want
 - [ ] Improve project assignment algorithm
 - [ ] Statistics on projects

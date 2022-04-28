@@ -807,7 +807,29 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	res.send(JSON.stringify(projectProposal.id));
 });
 app.get("/projectproposals/:id", (req, res) => {
-	res.render("projectproposal", {projectProposal: getProjectProposalById(req.params.id)});
+	files = db.prepare("SELECT * FROM projectProposalsMedia WHERE projectProposalId = ?").all(req.params.id);
+	images = [];
+	urls = [];
+	videos = [];
+	for (let i = 0; i < files.length; i++) {
+		if (files[i].type == "url")
+			urls.push(files[i].url);
+		else if (files[i].type == "image")
+			images.push(files[i].url);
+		else if (files[i].type == "video")
+			videos.push(files[i].url);
+		else {
+			//TODO handle illegal files
+		}
+	}
+	console.log(urls);
+	console.log(images);
+	res.render("projectproposal", {
+		projectProposal: getProjectProposalById(req.params.id),
+		urls: urls,
+		images: images,
+		videos: videos
+	});
 });
 app.get("/api/projectproposals/:projectProposalId/approve", (req, res) => {
 	res.setHeader("Content-Type", "application/json");

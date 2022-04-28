@@ -8,6 +8,24 @@ html(lang="en")
 		main
 			h2 #{projectProposal.title}
 			p #{projectProposal.description}
+			h3 Links
+			ul
+				- for (let i = 0; i < urls.length; i++) {
+					li 
+						a(href=urls[i]) #{urls[i]}
+				- }
+
+			h3 Images
+			div.proposal-flex
+				- for (let i = 0; i < images.length; i++) {
+					img.proposal-image(src=images[i])
+				- }
+			h4 Videos
+			div.proposal-flex
+				- for (let i = 0; i < videos.length; i++) {
+					video.proposal-video(controls)
+						source(src=videos[i])
+				- }
 
 			div
 				if !projectProposal.approved
