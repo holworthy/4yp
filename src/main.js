@@ -341,9 +341,9 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
 		let cohort = cohortStmt.get(req.params.cohortId);
 
-		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id WHERE cohortId = ?");
+		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, COUNT(projectsStudents.projectId) AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN projectsStudents ON projects.id = projectsStudents.projectId WHERE cohortId = ? GROUP BY projects.id");
 		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId); 
-
+		
 		res.render("cohort", {
 			cohort: cohort,
 			cohortStudents: cohortStudents
