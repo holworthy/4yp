@@ -69,6 +69,10 @@ main.fullwidth {
 	background-color: var(--blue);
 }
 
+.red-text {
+	color: var(--red);
+}
+
 .p1 {padding: 1rem;}
 .p1-top {padding-top: 1rem;}
 .p1-bottom {padding-bottom: 1rem;}
