@@ -7,6 +7,10 @@ html(lang="en")
 		main
 			h2 #{user.name}
 			div
+				if user.isStudent
+					h3 Cohorts
+					each cohort in cohorts
+						a(href="/cohorts/"+cohort.id) #{cohort.name}
 				h3 Projects
 				div
 					p Projects will go here
