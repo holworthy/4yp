@@ -73,6 +73,29 @@ main.fullwidth {
 	color: var(--red);
 }
 
+.proposal-image {
+	width: auto;
+	height: auto;
+	max-width: 300px;
+	max-height: 300px;
+}
+
+.proposal-video {
+	width: auto;
+	height: auto;
+	max-width: 300px;
+	max-height: 300px;
+}
+
+.proposal-flex {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-items: baseline;
+	align-content: space-around;
+}
+
 .p1 {padding: 1rem;}
 .p1-top {padding-top: 1rem;}
 .p1-bottom {padding-bottom: 1rem;}
