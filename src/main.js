@@ -962,4 +962,16 @@ app.get("/marking", (req, res) => {
 	});
 });
 
+function getAllProjects() {
+	let stmt = db.prepare("SELECT * FROM projects");
+	return stmt.all();
+}
+
+app.get("/projects", (req, res) => {
+	res.render("projects", {projects: getAllProjects()});
+});
+app.get("/projects/:projectId", (req, res) => {
+	res.render("project");
+});
+
 app.listen(8080);
