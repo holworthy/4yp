@@ -8,7 +8,7 @@
 - [ ] Limit how many projects supervisors can supervise
 - [ ] Limit how many students can do a project
 - [x] Allow students to pick 3 projects
-- [ ] Allow admins to add extra weighting to certain student choices
+- [x] Allow admins to add extra weighting to certain student choices
 	- [ ] For example if a student did a year in industry there may be a project that is specifically for them
 	- [x] Alternatively just allow admins to manually select a project for a student
 - [ ] Prioritise students choices
