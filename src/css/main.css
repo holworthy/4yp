@@ -154,10 +154,21 @@ header > div {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
+	align-items: center;
 }
 
 header div a {
 	text-align: right;
+	text-decoration: none;
+}
+
+.header-links {
+	height: fit-content;
+}
+
+.header-links a {
+	display: inline-block;
+	margin-left: 1rem;
 }
 
 .bordered {

@@ -19,7 +19,7 @@
 - [ ] Check agreed mark is between supervisor and moderator marks
 - [ ] Alert admins if difference in the supervisor and moderator marks is too high
 - [ ] Email all marks to the hub
-- [ ] 	Or allow a downloadable page which contains all the data
+	- [ ] Or allow a downloadable page which contains all the data
 - [ ] Allow hub staff/others to change student info
 
 ## Should
