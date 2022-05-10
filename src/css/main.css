@@ -558,3 +558,17 @@ td.inline * {
 td.inline input {
 	width: auto;
 }
+
+.pathway-moderation {
+	display: block;
+}
+
+.pathway-moderation input, .pathway-moderation label {
+	width: auto;
+	display: inline-block;
+}
+
+.pathway-moderation label {
+	margin: 0;
+	margin-left: 1rem;
+}

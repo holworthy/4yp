@@ -2,7 +2,7 @@
 
 ## Must
 
-- [ ] Allow moderators to select which pathways they can moderate
+- [x] Allow moderators to select which pathways they can moderate
 - [x] Get projects from supervisors
 - [x] Allow admins to approve or deny projects
 - [ ] Limit how many projects supervisors can supervise

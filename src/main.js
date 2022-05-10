@@ -39,29 +39,26 @@ db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMEN
 db.exec("CREATE TABLE IF NOT EXISTS prerequisites (projectProposalId INTEGER, moduleId INTEGER, UNIQUE(projectProposalId, moduleId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId INTEGER, UNIQUE(studentId, moduleId), FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS pathwaysSupervisors (pathwayId INTEGER, supervisorId INTEGER, UNIQUE(supervisorId, pathwayId), FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS pathwaysModerators (pathwayId INTEGER, moderatorId INTEGER, UNIQUE(pathwayId, moderatorId), FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
+
+db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, weighting INTEGER, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 
-// db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, maxNumToSupervise, isAdmin, isStudent, isSupervisor, isHubstaff) VALUES ()");
+db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
+
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Sammy Student', 'Sammy', 'sammy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100000000', 'abc12xyz', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Simon Supervisor', 'Simon', 'simon@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
-
-db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
-
-db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
-// db.exec("UPDATE OR IGNORE cohortsMemberships SET doneChoosing = 1 WHERE studentId = 5");
-
-db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 
 db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
 db.exec("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES ('Amazingness', 100.0, 1)");
@@ -972,6 +969,29 @@ app.get("/projects", (req, res) => {
 });
 app.get("/projects/:projectId", (req, res) => {
 	res.render("project");
+});
+
+app.get("/preferences", (req, res) => {
+	let stmt = db.prepare("SELECT pathways.id AS pathwayId, pathways.name as pathwayName, CASE WHEN moderatorId IS NULL THEN FALSE ELSE TRUE END AS isModerating FROM pathways LEFT JOIN pathwaysModerators ON pathways.id = pathwaysModerators.pathwayId AND moderatorId = ?");
+	res.render("preferences", {
+		user: req.session.user,
+		pathwayModerators: stmt.all(req.session.user.id)
+	});
+});
+app.post("/api/save-pathway-moderation", (req, res) => {
+	let checkboxes = req.body
+	for(let i = 0; i < checkboxes.length; i++) {
+		if(checkboxes[i].checked) {
+			let stmt = db.prepare("INSERT OR IGNORE INTO pathwaysModerators(pathwayId, moderatorId) VALUES (?, ?)");
+			stmt.run(checkboxes[i].pathwayId, req.session.user.id);
+		} else {
+			let stmt = db.prepare("DELETE FROM pathwaysModerators WHERE pathwayId = ?");
+			stmt.run(checkboxes[i].pathwayId);
+		}
+	}
+
+	res.setHeader("Content-Type", "application/json");
+	res.send("true");
 });
 
 app.listen(8080);
