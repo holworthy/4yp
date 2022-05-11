@@ -915,12 +915,11 @@ app.get("/overview", (req, res) => {
 	if(req.session.user.isStudent) {
 		try {
 			let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-			let row1 = stmt1.get(parseInt(req.session.user.id));
-			if (row1.projectId){
-				// res.render("studentoverview", {
-				// 	user: getUserById(req.session.user.id),
-				// 	project: getProjectById(row1.projectId)
-				// });
+			let row1 = stmt1.all(parseInt(req.session.user.id));
+			if (row1.length > 2) {
+				res.redirect("/projects");
+			}
+			if (row1.projectId) {
 				res.redirect("/projects/"+row1.projectId);
 			}
 			else{
@@ -967,15 +966,20 @@ function getAllProjects() {
 }
 
 app.get("/projects", (req, res) => {
+	if (req.session.user.isStudent) {
+		let row1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?").all(req.session.user.id);
+		let projects = [];
+		for (let i = 0; i < row1.length; i++) 
+			projects.push(getProjectById(row1[i].projectId));
+		res.render("projects", {projects: projects});
+	}
 	res.render("projects", {projects: getAllProjects()});
 });
 app.get("/projects/:projectId", (req, res) => {
 	if(req.session.user.isStudent) {
-		let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-		let row1 = stmt1.get(parseInt(req.session.user.id));
 		res.render("studentoverview", {
 			user: getUserById(req.session.user.id),
-			project: getProjectById(row1.projectId)
+			project: getProjectById(req.params.projectId)
 		});
 	} else {
 		res.render("project");
