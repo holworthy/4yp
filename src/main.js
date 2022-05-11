@@ -912,29 +912,31 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 });
 
 app.get("/overview", (req, res) => {
-	// if(req.session.user.isStudent) {
-	// 	try {
-	// 		let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-	// 		let row1 = stmt1.get(parseInt(req.session.user.id));
-	// 		if (row1.doneChoosing){
-	// 			res.render("studentoverview", {
-	// 				user: getUserById(req.session.user.id),
-	// 				project: getProjectById(row1.projectId)
-	// 			});
-	// 		}
-	// 		else{
-	// 			res.redirect("/pathways");
-	// 		}
-	// 	}
-	// 	catch {
-	// 		res.redirect("/pathways");
-	// 	}
-	// } else {
+	if(req.session.user.isStudent) {
+		try {
+			let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
+			let row1 = stmt1.get(parseInt(req.session.user.id));
+			if (row1.projectId){
+				// res.render("studentoverview", {
+				// 	user: getUserById(req.session.user.id),
+				// 	project: getProjectById(row1.projectId)
+				// });
+				res.redirect("/projects/"+row1.projectId);
+			}
+			else{
+				console.log("no");
+				res.redirect("/pathways");
+			}
+		}
+		catch {
+			res.redirect("/pathways");
+		}
+	} else {
 		res.render("overview", {
 			user: getUserById(req.session.user.id),
 			cohorts: getCohortsAndCohortsMembershipByStudentId(req.session.user.id)
 		});
-	// }
+	}
 });
 
 ["github", "overleaf"].forEach(e => {
@@ -968,7 +970,16 @@ app.get("/projects", (req, res) => {
 	res.render("projects", {projects: getAllProjects()});
 });
 app.get("/projects/:projectId", (req, res) => {
-	res.render("project");
+	if(req.session.user.isStudent) {
+		let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
+		let row1 = stmt1.get(parseInt(req.session.user.id));
+		res.render("studentoverview", {
+			user: getUserById(req.session.user.id),
+			project: getProjectById(row1.projectId)
+		});
+	} else {
+		res.render("project");
+	}
 });
 
 app.get("/preferences", (req, res) => {
