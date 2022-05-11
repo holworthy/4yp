@@ -5,4 +5,22 @@ html(lang="en")
 	body
 		include includes/header.pug
 		main
-			h2 Project
+			h2 #{project.projectProposalTitle}
+			p #{project.projectProposalDescription}
+
+			if user.isSupervisor
+				h3 Students
+				each student in projectStudents
+					a(href="/users/"+student.id) #{student.name}
+				if projectStudents.length == 0
+					p No students assigned yet
+
+				h3 Supervisors
+				each supervisor in projectSupervisors
+					a(href="/users/"+supervisor.id) #{supervisor.name}
+				if projectSupervisors.length == 0
+					p No supervisors assigned yet
+
+				h3 Deliverables
+				each deliverable in deliverables
+					a(href="/deliverable/"+deliverable.id) #{deliverable.name} #{deliverable.weighting}

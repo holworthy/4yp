@@ -44,7 +44,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId 
 
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
-db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, weighting INTEGER, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 
@@ -976,13 +976,24 @@ app.get("/projects", (req, res) => {
 	res.render("projects", {projects: getAllProjects()});
 });
 app.get("/projects/:projectId", (req, res) => {
+	let projectStmt = db.prepare("SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE projects.id = ?");
+	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
+	let projectSupervisorsStmt = db.prepare("SELECT * FROM projectsSupervisors LEFT JOIN users ON projectsSupervisors.supervisorId = users.id WHERE projectId = ?");
+	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN projectProposalsPathways ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN deliverables ON projectProposalsPathways.pathwayId = deliverables.pathwayId WHERE projects.id = ?");
+	
 	if(req.session.user.isStudent) {
 		res.render("studentoverview", {
 			user: getUserById(req.session.user.id),
 			project: getProjectById(req.params.projectId)
 		});
 	} else {
-		res.render("project");
+		res.render("project", {
+			user: req.session.user,
+			project: projectStmt.get(req.params.projectId),
+			projectStudents: projectStudentsStmt.all(req.params.projectId),
+			projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
+			deliverables: deliverablesStmt.all(req.params.projectId)
+		});
 	}
 });
 
