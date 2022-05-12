@@ -6,6 +6,7 @@ html(lang="en")
 		include includes/header.pug
 		main
 			h2 #{project.projectProposalTitle}
+			a(href="/cohorts/" + project.cohortId) Part of "#{project.cohortName}"
 			p #{project.projectProposalDescription}
 
 			h3 Deliverables

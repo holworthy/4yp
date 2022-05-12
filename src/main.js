@@ -13,6 +13,8 @@ let db = betterSqlite3("database.db");
 
 // table definitions
 
+// TODO: set all foreign keys on delete
+
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
 db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -28,7 +30,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTE
 
 db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()))");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT)");
+db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, cohortId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (cohortId) REFERENCES cohorts(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
@@ -159,7 +161,7 @@ function getAllPathways() {
 }
 
 function getProjectById(projectId) {
-	let stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
+	let stmt = db.prepare("SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id WHERE projects.id = ?");
 	return stmt.get(projectId);
 }
 
@@ -343,7 +345,7 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
 		let cohort = cohortStmt.get(req.params.cohortId);
 
-		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortId = ?");
+		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortsMemberships.cohortId = ?");
 		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
 
 		res.render("cohort", {
@@ -457,12 +459,12 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 });
 
 app.get("/cohorts/:cohortId/createprojects", (req, res) => {
-	
+		// TODO: fix this code that jack clearly wrote while he was asleep
 		let cohortId = req.params.cohortId;
 		let studentIds = db.prepare("SELECT studentId FROM cohortsMemberships WHERE cohortId = ? AND (assignedChoice IS NOT NULL OR assignedChoice = '');").all(cohortId);
 		for (let i = 0; i < studentIds.length; i++) {
 			let assignedChoiceId = db.prepare("SELECT assignedChoice FROM cohortsMemberships WHERE cohortId = ? AND studentId = ?").get(cohortId, studentIds[i].studentId);
-			let projId = db.prepare("INSERT INTO projects(projectProposalId) VALUES (?)").run(assignedChoiceId.assignedChoice).lastInsertRowid;
+			let projId = db.prepare("INSERT INTO projects(projectProposalId, cohortId) VALUES (?, ?)").run(assignedChoiceId.assignedChoice, cohortId).lastInsertRowid;
 			db.prepare("INSERT INTO projectsStudents(projectId, studentId) VALUES (?, ?)").run(projId, studentIds[i].studentId);
 			let supervisorId = db.prepare("SELECT supervisorId FROM projectProposalsSupervisors WHERE projectProposalId = ?").get(assignedChoiceId.assignedChoice);
 			for (let j =0; j < supervisorId; j++){
@@ -980,21 +982,30 @@ app.get("/projects", (req, res) => {
 	}
 	res.render("projects", {projects: getAllProjects()});
 });
+
+// TODO: for the love of all things good this needs a refactor
 app.get("/projects/:projectId", (req, res) => {
-	let projectStmt = db.prepare("SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE projects.id = ?");
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
 	let projectSupervisorsStmt = db.prepare("SELECT * FROM projectsSupervisors LEFT JOIN users ON projectsSupervisors.supervisorId = users.id WHERE projectId = ?");
 	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId AND cohortsMemberships.studentId = ? INNER JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId AND cohortsMemberships.pathwayId = deliverablesMemberships.pathwayId INNER JOIN deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE projects.id = ?");
-	
+	let deliverablesPerPathwayStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId")
+
+	let project = getProjectById(req.params.projectId);
+
 	if(req.session.user.isStudent) {
+		// get deliverables for this student in this project
+
+		let deliverablesStmt = db.prepare("SELECT * FROM deliverables INNER JOIN deliverablesMemberships ON deliverables.id = deliverablesMemberships.deliverableId WHERE deliverablesMemberships.cohortId = ? ORDER BY dueDate ASC");
+		
 		res.render("studentoverview", {
 			user: getUserById(req.session.user.id),
-			project: getProjectById(req.params.projectId)
+			project: project,
+			deliverables: deliverablesStmt.all(project.cohortId)
 		});
 	} else {
 		res.render("project", {
 			user: req.session.user,
-			project: projectStmt.get(req.params.projectId),
+			project: project,
 			projectStudents: projectStudentsStmt.all(req.params.projectId),
 			projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
 			deliverables: deliverablesStmt.all(req.session.user.id, req.params.projectId)
