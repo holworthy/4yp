@@ -33,7 +33,8 @@ db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, student
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 
-db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
+// TODO: pathway should not be default
+db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER DEFAULT 1, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
 
 db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, code TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS prerequisites (projectProposalId INTEGER, moduleId INTEGER, UNIQUE(projectProposalId, moduleId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
@@ -44,7 +45,8 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId 
 
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
-db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+// TODO: does name need to be unique?
+db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
@@ -86,6 +88,8 @@ db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathw
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Web-Based Programming', 'CMP-4011A')");
+
+db.exec("INSERT OR IGNORE INTO deliverables(name) VALUES ('Deliverable 1'), ('Deliverable 2'), ('Deliverable 3')");
 
 // class definitions
 
@@ -339,9 +343,9 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
 		let cohort = cohortStmt.get(req.params.cohortId);
 
-		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, COUNT(projectsStudents.projectId) AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN projectsStudents ON projects.id = projectsStudents.projectId WHERE cohortId = ? GROUP BY projects.id");
-		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId); 
-		
+		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortId = ?");
+		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
+
 		res.render("cohort", {
 			cohort: cohort,
 			cohortStudents: cohortStudents
@@ -485,7 +489,7 @@ app.get("/api/add-student-to-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsMemberships(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring, pathwayId) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0, NULL)"); // TODO: check for SQL injection
+		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsMemberships(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0)"); // TODO: check for SQL injection
 		stmt.run(req.query.cohortId, req.query.studentId);
 		res.sendStatus(200);
 	}
@@ -980,7 +984,7 @@ app.get("/projects/:projectId", (req, res) => {
 	let projectStmt = db.prepare("SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id WHERE projects.id = ?");
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
 	let projectSupervisorsStmt = db.prepare("SELECT * FROM projectsSupervisors LEFT JOIN users ON projectsSupervisors.supervisorId = users.id WHERE projectId = ?");
-	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN projectProposalsPathways ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN deliverables ON projectProposalsPathways.pathwayId = deliverables.pathwayId WHERE projects.id = ?");
+	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId AND cohortsMemberships.studentId = ? INNER JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId AND cohortsMemberships.pathwayId = deliverablesMemberships.pathwayId INNER JOIN deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE projects.id = ?");
 	
 	if(req.session.user.isStudent) {
 		res.render("studentoverview", {
@@ -993,7 +997,7 @@ app.get("/projects/:projectId", (req, res) => {
 			project: projectStmt.get(req.params.projectId),
 			projectStudents: projectStudentsStmt.all(req.params.projectId),
 			projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
-			deliverables: deliverablesStmt.all(req.params.projectId)
+			deliverables: deliverablesStmt.all(req.session.user.id, req.params.projectId)
 		});
 	}
 });

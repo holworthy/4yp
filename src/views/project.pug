@@ -8,6 +8,12 @@ html(lang="en")
 			h2 #{project.projectProposalTitle}
 			p #{project.projectProposalDescription}
 
+			h3 Deliverables
+			each deliverable in deliverables
+				a(href="/deliverable/"+deliverable.id) #{deliverable.name} #{deliverable.weighting}
+			if deliverables.length == 0
+				p No deliverables set yet
+
 			if user.isSupervisor
 				h3 Students
 				each student in projectStudents
@@ -21,6 +27,4 @@ html(lang="en")
 				if projectSupervisors.length == 0
 					p No supervisors assigned yet
 
-				h3 Deliverables
-				each deliverable in deliverables
-					a(href="/deliverable/"+deliverable.id) #{deliverable.name} #{deliverable.weighting}
+				
