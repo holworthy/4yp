@@ -49,7 +49,7 @@ db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BE
 
 // TODO: does name need to be unique?
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
-db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, UNIQUE(deliverableId, cohortId, pathwayId), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
@@ -990,34 +990,41 @@ app.get("/projects", (req, res) => {
 	res.render("projects", {projects: getAllProjects()});
 });
 
+function getSubmissionsByProjectIdAndStudentId(projectId, studentId) {
+	let stmt = db.prepare("SELECT * FROM submissions WHERE projectId = ? AND studentId = ?");
+	return stmt.all(projectId, studentId);
+}
+
+function getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverableId, projectId, studentId) {
+	let stmt = db.prepare("SELECT * FROM submissions WHERE deliverableId = ? AND projectId = ? AND studentId = ?");
+	return stmt.all(deliverableId, projectId, studentId);
+}
+
+function getSubmissionFilesBySubmissionId(submissionId) {
+	let stmt = db.prepare("SELECT * FROM submissionFiles WHERE submissionId = ?");
+	return stmt.all(submissionId);
+}
+
 // TODO: for the love of all things good this needs a refactor
 app.get("/projects/:projectId", (req, res) => {
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
 	let projectSupervisorsStmt = db.prepare("SELECT * FROM projectsSupervisors LEFT JOIN users ON projectsSupervisors.supervisorId = users.id WHERE projectId = ?");
-	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId AND cohortsMemberships.studentId = ? INNER JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId AND cohortsMemberships.pathwayId = deliverablesMemberships.pathwayId INNER JOIN deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE projects.id = ?");
+	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId AND cohortsMemberships.studentId = ? INNER JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId AND cohortsMemberships.pathwayId = deliverablesMemberships.pathwayId INNER JOIN deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE projects.id = ? ORDER BY dueDate ASC");
 	let deliverablesPerPathwayStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId")
 
 	let project = getProjectById(req.params.projectId);
 
-	if(req.session.user.isStudent) {
-		// get deliverables for this student in this project
+	let deliverables = deliverablesStmt.all(req.session.user.id, req.params.projectId);
+	for(let i = 0; i < deliverables.length; i++)
+		deliverables[i].submissions = getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverables[i].id, req.params.projectId, req.session.user.id);
 
-		let deliverablesStmt = db.prepare("SELECT * FROM deliverables INNER JOIN deliverablesMemberships ON deliverables.id = deliverablesMemberships.deliverableId WHERE deliverablesMemberships.cohortId = ? ORDER BY dueDate ASC");
-		
-		res.render("studentoverview", {
-			user: getUserById(req.session.user.id),
-			project: project,
-			deliverables: deliverablesStmt.all(project.cohortId)
-		});
-	} else {
-		res.render("project", {
-			user: req.session.user,
-			project: project,
-			projectStudents: projectStudentsStmt.all(req.params.projectId),
-			projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
-			deliverables: deliverablesStmt.all(req.session.user.id, req.params.projectId)
-		});
-	}
+	res.render("project", {
+		project: project,
+		projectStudents: projectStudentsStmt.all(req.params.projectId),
+		projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
+		deliverables: deliverables,
+		submissions: getSubmissionsByProjectIdAndStudentId(project.id, req.session.user.id)
+	});
 });
 
 app.get("/preferences", (req, res) => {

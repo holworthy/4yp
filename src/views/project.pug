@@ -2,18 +2,50 @@ doctype html
 html(lang="en")
 	head
 		include includes/head.pug
+		link(rel="stylesheet", href="/css/project.css")
+		script(src="/js/project.js")
 	body
 		include includes/header.pug
 		main
-			h2 #{project.projectProposalTitle}
-			a(href="/cohorts/" + project.cohortId) Part of "#{project.cohortName}"
-			p #{project.projectProposalDescription}
+			if user.isStudent
+				.text-center
+					h2 #{project.projectProposalTitle}
+					a(href="/cohorts/" + project.cohortId) Part of "#{project.cohortName}"
+					p #{project.projectProposalDescription}
 
-			h3 Deliverables
-			each deliverable in deliverables
-				a(href="/deliverable/"+deliverable.id) #{deliverable.name} #{deliverable.weighting}
-			if deliverables.length == 0
-				p No deliverables set yet
+				
+					h2 Your next deliverable is:
+					p#next-deliverable #{deliverables[0].name} - #{deliverables[0].dueDate}
+
+					h2 Deliverables
+					each deliverable in deliverables
+						.project-deliverable
+							a(href="/deliverable/"+deliverable.id) #{deliverable.name} - #{deliverable.dueDate} - #{deliverable.weighting}
+							a(href="/projects/"+project.id+"/makesubmission/"+deliverable.id) Create submission
+					if deliverables.length == 0
+						p No deliverables set yet
+
+					h2 Submissions
+					each deliverable in deliverables
+						if deliverable.submissions.length > 0
+							h3 #{deliverable.name}
+							each submission in deliverable.submissions
+								a(href="/submission/"+submission.id) #{submission.createdOn}
+
+					h2 Actions
+					.actions
+						button Email Supervisor
+						button Project Info
+						button(onclick="github("+ (project.githubLink != null ? "\""+project.githubLink+"\"" : project.githubLink) +")") Github
+						button(onclick="overleaf("+ (project.overleafLink != null ? "\""+project.overleafLink+"\"" : project.overleafLink) +")") Overleaf
+					.container.white.bordered.p1.m1-top(id="githubform", name="githubform", style="display: none;")
+						form.input_flexbox(method="post", enctype="multipart/form-data", action="/overview/github")
+							input.m1-top(type="text", name="githubLink", Placeholder=(project.githubLink != null ? project.githubLink : "https://github.com/"))
+							input.login_submit.m1-top(type="submit")
+					.container.white.bordered.p1.m1-top(id="overleafForm", name="overleafForm", style="display: none;")
+						form.input_flexbox(method="post", enctype="multipart/form-data", action="/overview/overleaf")
+							input.m1-top(type="text", name="overleafLink", Placeholder=(project.overleafLink != null ? project.overleafLink : "https://www.overleaf.com/"))
+							input.login_submit.m1-top(type="submit")
 
 			if user.isSupervisor
 				h3 Students
@@ -27,5 +59,3 @@ html(lang="en")
 					a(href="/users/"+supervisor.id) #{supervisor.name}
 				if projectSupervisors.length == 0
 					p No supervisors assigned yet
-
-				
