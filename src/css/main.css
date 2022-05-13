@@ -574,3 +574,7 @@ td.inline input {
 	margin: 0;
 	margin-left: 1rem;
 }
+
+p a {
+	display: inline;
+}

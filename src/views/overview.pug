@@ -26,6 +26,10 @@ html(lang="en")
 				h3.m1-top Create a project proposal
 				a(href="/projectproposals/new") Create a project proposal 
 
+				h3.m1-top Projects you are supervising
+				for project in projectsSupervising
+					a(href="/projects/" + project.id) #{project.projectProposalTitle}
+
 			if user.isHubstaff
 
 			if user.isAdmin

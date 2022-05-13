@@ -12,6 +12,7 @@ html(lang="en")
 						h2 #{cohort.name}
 						p Created on #{cohort.createdOn}
 						p #{cohort.numStudents} Students
-			a.m1-top(href="/cohorts/new")
-				h2 Or Create A New Cohort 
+			if user.isAdmin
+				a.m1-top(href="/cohorts/new")
+					h2 Or Create A New Cohort 
 			
