@@ -1010,33 +1010,11 @@ function getProjectsBySupervisorId(supervisorId) {
 }
 
 app.get("/overview", (req, res) => {
-	if(req.session.user.isStudent) {
-		try {
-			let stmt1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-			let row1 = stmt1.all(parseInt(req.session.user.id));
-			if (row1.length > 2) {
-				res.redirect("/projects");
-			}
-			if (row1.projectId) {
-				res.redirect("/projects/"+row1.projectId);
-			}
-			else{
-				console.log("no");
-				res.redirect("/pathways");
-			}
-		}
-		catch {
-			res.redirect("/pathways");
-		}
-	} else {
-		let projectsSupervising = getProjectsBySupervisorId(req.session.user.id);
-
-		// TODO: add project title when we have a view for filled projects
-		res.render("overview", {
-			cohorts: getCohortsAndCohortsMembershipByStudentId(req.session.user.id),
-			projectsSupervising: projectsSupervising
-		});
-	}
+	res.render("overview", {
+		cohorts: req.session.user.isStudent ? getCohortsAndCohortsMembershipByStudentId(req.session.user.id) : [],
+		projectsSupervising: req.session.user.isSupervisor ? getProjectsBySupervisorId(req.session.user.id) : []
+	});
+	return;
 });
 
 ["github", "overleaf"].forEach(e => {
