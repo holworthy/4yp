@@ -8,6 +8,8 @@ let sha256 = require("sha256");
 let betterSqlite3SessionStore = require("better-sqlite3-session-store");
 let expressFileUpload = require("express-fileupload");
 let mime = require("mime-types");
+let compression = require("compression");
+let minify = require("express-minify");
 
 let db = betterSqlite3("database.db");
 
@@ -211,6 +213,10 @@ app.use(bodyParser.urlencoded({
 	extended: false
 }));
 app.use(bodyParser.json());
+app.use(compression({
+	threshold: 0
+}));
+app.use(minify());
 ["css", "js", "fonts"].forEach(value => app.use("/" + value, express.static("./" + value, {maxAge: cacheAge})));
 app.set("view engine", "pug");
 app.use(expressSession({
