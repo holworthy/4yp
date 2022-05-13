@@ -28,7 +28,7 @@ html(lang="en")
 									p.project-detail -
 									p.project-detail -
 									i(class="fas fa-grip-lines")
-				a(href="#") Done
+				a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/donechoosing") Done
 		.container.white.bordered.p1.m1-top
 			table
 				thead
@@ -37,7 +37,7 @@ html(lang="en")
 						th Supervised By
 						th Select
 				tbody
-					each projectProposal in projectProposals
+					each projectProposal in projectproposals
 						tr
 							td
 								a(href="/projectproposals/" + projectProposal.id)  #{projectProposal.title}
