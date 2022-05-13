@@ -49,9 +49,10 @@ db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BE
 
 // TODO: does name need to be unique?
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
-db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
-db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
+db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, UNIQUE(deliverableId, cohortId, pathwayId), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
@@ -92,6 +93,8 @@ db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development'
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Web-Based Programming', 'CMP-4011A')");
 
 db.exec("INSERT OR IGNORE INTO deliverables(name) VALUES ('Deliverable 1'), ('Deliverable 2'), ('Deliverable 3')");
+db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (1, 1, 1, '2022-05-20', 50)");
+db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (3, 1, 1, '2022-05-20', 50)");
 
 // class definitions
 
@@ -278,10 +281,13 @@ app.post("/login", (req, res) => {
 
 // users must be logged in to view any page defined below this
 app.use((req, res, next) => {
-	if(req.session.loggedIn)
+	if(req.session.loggedIn) {
+		// once the user is logged in we can make user available to all the views
+		res.locals.user = req.session.user;
 		next();
-	else
+	} else {
 		res.redirect("/");
+	}
 });
 
 // logout page
@@ -628,6 +634,7 @@ app.get("/pathways/:id", (req, res) => {
 	}
 });
 
+// TODO: this only allows choices for first cohort user is in
 app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 	let pathwayId = req.params.pathwayId;
 	try{
@@ -1034,6 +1041,36 @@ app.post("/api/save-pathway-moderation", (req, res) => {
 
 	res.setHeader("Content-Type", "application/json");
 	res.send("true");
+});
+
+app.get("/projects/:projectId/makesubmission/:deliverableId", (req, res) => {
+	res.render("project-makesubmission", {
+		project: getProjectById(req.params.projectId),
+		deliverable: getDeliverableById(req.params.deliverableId)
+	});
+});
+
+app.post("/projects/:projectId/makesubmission/:deliverableId", (req, res) => {
+	// TODO: check for files 
+	// TODO: check file extensions
+
+	let submissionStmt = db.prepare("INSERT INTO submissions(deliverableId, projectId, studentId) VALUES (?, ?, ?)");
+	let result = submissionStmt.run(req.params.deliverableId, req.params.projectId, req.session.user.id);
+
+	// TODO: check this succeeded
+	let submissionId = result.lastInsertRowid;
+	
+	for(let i = 0; i < req.files.files.length; i++) {
+		let file = req.files.files[i];
+		let fileNameParts = file.name.split(".");
+		let newFileName = "/uploads/" + file.md5 + "." + fileNameParts[fileNameParts.length - 1];
+		file.mv(newFileName);
+
+		let stmt = db.prepare("INSERT INTO submissionsFiles(submissionId, url) VALUES (?, ?)");
+		stmt.run(submissionId, newFileName);
+	}
+
+	res.redirect("/projects/" + req.params.projectId);
 });
 
 app.listen(8080);

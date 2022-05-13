@@ -12,6 +12,12 @@ html(lang="en")
 		.container.white.bordered.p1.m1-top.flex.flex-col.flex_space
 			h2.flex-1.flex-col-centre Your next deadline is:
 			h1.flex-1.flex-col-centre #{deliverables[0].dueDate} - #{deliverables[0].name}
+		main
+			h2 Deliverables
+			each deliverable in deliverables
+				div
+					p #{deliverable.name} - #{deliverable.dueDate}
+					a(href="/projects/"+project.id+"/makesubmission/"+deliverable.id) Create submission
 
 		.container.white.bordered.p1.m1-top.flex.flex-row.flex_centre.flex_space
 			table.m1-top 
