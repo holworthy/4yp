@@ -46,7 +46,7 @@ window.addEventListener("load", () => {
 		xhr.setRequestHeader("Content-Type", "application/json");
 		xhr.addEventListener("load", () => {
 			let response = JSON.parse(xhr.response);
-			location.href = "/markschemes/" + response.markSchemeId;
+			location.href = "/markschemes/" + response.markschemeId;
 		});
 		xhr.addEventListener("error", () => {
 			// TODO: do something when this goes wrong

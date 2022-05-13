@@ -19,12 +19,12 @@ let db = betterSqlite3("database.db");
 
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
-db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id) ON DELETE CASCADE)");
-db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id) ON DELETE CASCADE)");
-db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markSchemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markSchemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markSchemePartId) REFERENCES markSchemeParts(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS markschemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+db.exec("CREATE TABLE IF NOT EXISTS markschemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markschemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markschemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markschemePartId) REFERENCES markschemeParts(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markSchemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id) ON DELETE RESTRICT, FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE SET DEFAULT)");
+db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markschemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE RESTRICT, FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE SET DEFAULT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INTEGER, url TEXT, type TEXT, UNIQUE(projectProposalId, url), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -47,7 +47,7 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS pathwaysModerators (pathwayId INTEGER, moderatorId INTEGER, UNIQUE(pathwayId, moderatorId), FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
-db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
+db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markschemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
 // TODO: does name need to be unique?
@@ -69,20 +69,20 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 
-db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
-db.exec("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES ('Amazingness', 100.0, 1)");
+db.exec("INSERT OR IGNORE INTO markschemes(name) VALUES ('Mark Scheme 1')");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Amazingness', 100.0, 1)");
 
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
 // db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
 
 // db.exec("UPDATE OR IGNORE cohortsMemberships SET projectid = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
@@ -111,24 +111,24 @@ function getAllUsers() {
 	return stmt.all();
 }
 
-function getMarkSchemeById(markSchemeId) {
-	let stmt1 = db.prepare("SELECT * FROM markSchemes WHERE id = ?");
-	let markScheme = stmt1.get(markSchemeId);
+function getMarkSchemeById(markschemeId) {
+	let stmt1 = db.prepare("SELECT * FROM markschemes WHERE id = ?");
+	let markscheme = stmt1.get(markschemeId);
 
-	let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
-	markScheme.parts = stmt2.all(markSchemeId);
+	let stmt2 = db.prepare("SELECT * FROM markschemesParts WHERE markschemeId = ?");
+	markscheme.parts = stmt2.all(markschemeId);
 
-	return markScheme;
+	return markscheme;
 }
 
 function getAllMarkSchemes() {
-	let stmt = db.prepare("SELECT * FROM markSchemes");
+	let stmt = db.prepare("SELECT * FROM markschemes");
 	return stmt.all();
 }
 
-function getMarkSchemePartById(markSchemePartId) {
-	let stmt = db.prepare("SELECT * FROM markSchemeParts WHERE id = ?");
-	return stmt.all(markSchemePartId);
+function getMarkSchemePartById(markschemePartId) {
+	let stmt = db.prepare("SELECT * FROM markschemeParts WHERE id = ?");
+	return stmt.all(markschemePartId);
 }
 
 function getMarkschemePartsByMarkshemeId(markschemeId) {
@@ -180,7 +180,7 @@ function getProjectProposalById(projectProposalId) {
 	// let stmt1 = db.prepare("SELECT * FROM projectProposals WHERE id = ?");
 	// let row1 = stmt1.get(id);
 
-	// let projectProposal = new ProjectProposal(row1.id, row1.title, row1.description, row1.approved, row1.archived, getMarkSchemeById(row1.markSchemeId));
+	// let projectProposal = new ProjectProposal(row1.id, row1.title, row1.description, row1.approved, row1.archived, getMarkSchemeById(row1.markschemeId));
 
 	// let stmt2 = db.prepare("SELECT * FROM projectProposalsSupervisors WHERE projectProposalId = ?");
 	// stmt2.all(row1.id).forEach(row => projectProposal.supervisors.push(getUserById(row.supervisorId)));
@@ -361,7 +361,7 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortsMemberships.cohortId = ?");
 		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
 		
-		let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
+		let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName, markschemes.name AS markschemeName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id LEFT JOIN markschemes ON deliverablesMemberships.markschemeId = markschemes.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
 		console.log(deliverables);
 
 		res.render("cohort", {
@@ -486,6 +486,17 @@ app.get("/api/all-pathways", (req, res) => {
 	}
 });
 
+app.get("/api/all-markschemes", (req, res) => {
+	res.setHeader("Content-Type", "application/json");
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("SELECT * FROM markschemes"); // TODO: check for SQL injection
+		console.log(stmt.all());
+		res.send(JSON.stringify(stmt.all()));
+	}
+});
+
 app.post("/api/remove-deliverable-in-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
@@ -501,8 +512,9 @@ app.post("/api/change-deliverable-in-cohort", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		// TODO: check date formats are good
-		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
-		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
+		console.log(req.body.markscheme);
+		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ?, markschemeId = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
+		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.markscheme, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
 		res.setHeader("Content-Type", "application/json");
 		res.send(JSON.stringify(true));
 	}
@@ -924,27 +936,27 @@ app.post("/api/markschemes/new", (req, res) => {
 	let name = req.body.name;
 	let parts = req.body.parts;
 
-	let stmt = db.prepare("INSERT OR IGNORE INTO markSchemes(name) VALUES (?)");
+	let stmt = db.prepare("INSERT OR IGNORE INTO markschemes(name) VALUES (?)");
 	stmt.run(name);
 
 	// TODO: check if this fails
-	stmt = db.prepare("SELECT id, name FROM markSchemes WHERE name = ?");
-	let markSchemeId = stmt.get(name).id;
+	stmt = db.prepare("SELECT id, name FROM markschemes WHERE name = ?");
+	let markschemeId = stmt.get(name).id;
 
 	for(let i = 0; i < parts.length; i++) {
 		let part = parts[i];
-		stmt = db.prepare("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES (?, ?, ?)");
-		stmt.run(part.name, part.weight, markSchemeId);
+		stmt = db.prepare("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES (?, ?, ?)");
+		stmt.run(part.name, part.weight, markschemeId);
 		// TODO: check if this fails
 	}
 
 	res.setHeader("Content-Type", "application/json");
 	res.send(JSON.stringify({
-		markSchemeId: markSchemeId
+		markschemeId: markschemeId
 	}));
 });
 app.get("/markschemes/:id", (req, res) => res.render("markscheme", {
-	markScheme: getMarkSchemeById(req.params.id)
+	markscheme: getMarkSchemeById(req.params.id)
 }));
 
 // modules

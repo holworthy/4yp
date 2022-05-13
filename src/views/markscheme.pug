@@ -5,19 +5,19 @@ html
 	body
 		include includes/header.pug
 		main
-			h2 #{markScheme.name}
+			h2 #{markscheme.name}
 			table.m1-top
 				thead
 					tr
 						th Name
 						th Weight
 				tbody
-					- for(let i = 0; i < markScheme.parts.length; i++) {
+					- for(let i = 0; i < markscheme.parts.length; i++) {
 					tr
-						td #{markScheme.parts[i].name}
-						td #{markScheme.parts[i].weight}
+						td #{markscheme.parts[i].name}
+						td #{markscheme.parts[i].weight}
 					- }
-					- if(markScheme.parts.length == 0) {
+					- if(markscheme.parts.length == 0) {
 					tr
 						td(colspan="2") No parts in this markscheme
 					- }

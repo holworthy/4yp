@@ -76,6 +76,7 @@ html(lang="en")
 						th Name
 						th Pathway 
 						th Weighting 
+						th Markscheme
 						th Due Date 
 						th Edit/Remove
 					each deliverable in deliverables 
@@ -85,6 +86,8 @@ html(lang="en")
 							td(data-pathway-id=deliverable.pathwayId)
 								a(href="/pathways/"+deliverable.pathwayId)  #{deliverable.pathwayName}
 							td(data-weight=deliverable.weighting) #{deliverable.weighting}
+							td(data-markscheme-id=deliverable.markschemeId)
+								a(href="/markshemes/"+deliverable.markschemeId) #{deliverable.markschemeName}
 							td(data-date=deliverable.dueDate) #{deliverable.dueDate}
 							td
 								button(onclick="edit(this)") Edit

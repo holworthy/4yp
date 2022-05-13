@@ -44,13 +44,32 @@ function edit(editButton){
 	tds[2].appendChild(weightingInput);
 
 	tds[3].innerHTML = "";
+	let markschemeSelect = document.createElement("select");
+	markschemeSelect.setAttribute("name", "markscheme");
+	markschemeSelect.setAttribute("id", "markscheme");
+	let xhr2 = new XMLHttpRequest();
+	xhr2.addEventListener("load", () => {
+		let markschemes = JSON.parse(xhr2.response);
+		console.log(markschemes);
+		for (let j = 0; j < markschemes.length; j++){
+			let option = document.createElement("option");
+			option.setAttribute("value", markschemes[j].id);
+			option.appendChild(document.createTextNode(markschemes[j].name));
+			markschemeSelect.appendChild(option);
+		}
+	});
+	xhr2.open("GET", "/api/all-markschemes");
+	xhr2.send();
+	tds[3].appendChild(markschemeSelect);
+
+	tds[4].innerHTML = "";
 	let dateInput = document.createElement("input");
 	dateInput.setAttribute("type", "date");
 	dateInput.setAttribute("name", "dueDate");
-	dateInput.setAttribute("value", tds[3].dataset.date);
-	tds[3].appendChild(dateInput);
+	dateInput.setAttribute("value", tds[4].dataset.date);
+	tds[4].appendChild(dateInput);
 
-	tds[4].removeChild(editButton);
+	tds[5].removeChild(editButton);
 	let submit = document.createElement("button");
 	submit.addEventListener("click", () => {
 		let xhr2 = new XMLHttpRequest();
@@ -66,12 +85,13 @@ function edit(editButton){
 			newPathway: pathwaySelect.value,
 			dueDate: dateInput.value,
 			weight: weightingInput.value,
+			markscheme: markschemeSelect.value,
 			deliverableId: tds[0].dataset.deliverableId,
 			pathwayId: tds[1].dataset.pathwayId
 		}));
 	});
 	submit.appendChild(document.createTextNode("Update"));
-	tds[4].appendChild(submit);
+	tds[5].appendChild(submit);
 }
 
 window.addEventListener("load", () => {
@@ -132,6 +152,7 @@ window.addEventListener("load", () => {
 					inputDeliverableID.setAttribute("name", "id");
 					inputDeliverableID.setAttribute("value", deliverables[i].id);
 					form.appendChild(inputDeliverableID);
+
 					let pathwaySelect = document.createElement("select");
 					pathwaySelect.setAttribute("name", "pathway");
 					pathwaySelect.setAttribute("id", "pathway");
@@ -148,14 +169,35 @@ window.addEventListener("load", () => {
 					xhr4.open("GET", "/api/all-pathways");
 					xhr4.send();
 					form.appendChild(pathwaySelect);
+
+					let markschemeSelect = document.createElement("select");
+					markschemeSelect.setAttribute("name", "markscheme");
+					markschemeSelect.setAttribute("id", "markscheme");
+					let xhr3 = new XMLHttpRequest();
+					xhr3.addEventListener("load", () => {
+						let markschemes = JSON.parse(xhr3.response);
+						console.log(markschemes);
+						for (let j = 0; j < markschemes.length; j++){
+							let option = document.createElement("option");
+							option.setAttribute("value", markschemes[j].id);
+							option.appendChild(document.createTextNode(markschemes[j].name));
+							markschemeSelect.appendChild(option);
+						}
+					});
+					xhr3.open("GET", "/api/all-markschemes");
+					xhr3.send();
+					form.appendChild(markschemeSelect);
+
 					let dateInput = document.createElement("input");
 					dateInput.setAttribute("type", "date");
 					dateInput.setAttribute("name", "dueDate");
 					form.appendChild(dateInput);
+
 					let weightingInput = document.createElement("input");
 					weightingInput.setAttribute("type", "text");
 					weightingInput.setAttribute("name", "weight");
 					form.appendChild(weightingInput);
+
 					let submit = document.createElement("input");
 					submit.setAttribute("type", "submit");
 					form.appendChild(submit);
