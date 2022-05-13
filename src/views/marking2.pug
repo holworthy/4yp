@@ -1,0 +1,34 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		link(rel="stylesheet", href="/css/marking.css")
+		script(src="/js/marking.js") 
+	body(data-submission-id = submission.id)
+		include includes/header.pug
+		p #{JSON.stringify(submission)}
+		main
+			.split
+				div
+					.sticky
+						h2 Marking
+						p #{markscheme.name}
+
+						#marksheet
+							#header
+								p Name
+								p Mark
+							#parts
+								each part in markschemeParts
+									.flex-equal
+										p #{part.name}
+										div
+											p
+												input.part-input(type="text", data-part-id=part.id)
+												| /#{part.weight}
+
+						button.m1-top#submit-marking-button Submit Marking
+
+				div
+					each submissionFile in submissionFiles
+						iframe(src=submissionFile.url, frameborder="0")

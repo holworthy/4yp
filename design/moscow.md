@@ -61,6 +61,7 @@
 - [ ] Deadlines
 - [ ] Progress tracker
 - [ ] Grouped marksheet options
+- [ ] Breadcrumbs
 
 ## Won't
 

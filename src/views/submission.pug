@@ -14,3 +14,7 @@ html(lang="en")
 			each submissionFile in submissionFiles
 				div
 					a(href=submissionFile.url) #{submissionFile.name}
+
+			if user.isSupervisor
+				h3 Marking
+				a(href="/marking/" + submission.id) Mark this submission 
