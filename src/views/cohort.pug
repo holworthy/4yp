@@ -71,10 +71,24 @@ html(lang="en")
 				input#deliverable-name-input(type="text", placeholder="Type a deliverable name")
 				#deliverable-box
 				h3 current deliverables 
-				ul 
+				table
+					tr 
+						th Name
+						th Pathway 
+						th Weighting 
+						th Due Date 
+						th Edit/Remove
 					each deliverable in deliverables 
-						li 
-							a(href="/deliverable/"+deliverable.id) #{deliverable.name}
+						tr
+							td(data-deliverable-id=deliverable.deliverableId)
+								a(href="/deliverable/"+deliverable.deliverableId) #{deliverable.deliverableName}
+							td(data-pathway-id=deliverable.pathwayId)
+								a(href="/pathways/"+deliverable.pathwayId)  #{deliverable.pathwayName}
+							td(data-weight=deliverable.weighting) #{deliverable.weighting}
+							td(data-date=deliverable.dueDate) #{deliverable.dueDate}
+							td
+								button(onclick="edit(this)") Edit
+								button(onclick="remove(this)") Remove
 			.m2-top
 				h2 Assign Projects
 				p.red-text WARNING: THIS ACTION IS NOT REVERSIBLE!

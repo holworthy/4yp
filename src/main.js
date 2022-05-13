@@ -353,9 +353,10 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohort = cohortStmt.get(req.params.cohortId);
 		
 		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortsMemberships.cohortId = ?");
-		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);		
+		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
 		
-		let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.* FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
+		let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
+		console.log(deliverables);
 
 		res.render("cohort", {
 			cohort: cohort,
@@ -479,10 +480,33 @@ app.get("/api/all-pathways", (req, res) => {
 	}
 });
 
+app.post("/api/remove-deliverable-in-cohort", (req, res) => {
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		db.prepare("DELETE FROM deliverablesMemberships WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?").run(req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
+		res.setHeader("Content-Type", "application/json");
+		res.send(JSON.stringify(true));
+	}
+});
+
+app.post("/api/change-deliverable-in-cohort", (req, res) => {
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		// TODO: check date formats are good
+		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
+		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
+		res.setHeader("Content-Type", "application/json");
+		res.send(JSON.stringify(true));
+	}
+});
+
 app.post("/api/add-deliverable-to-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
+		// TODO: check date formats are good
 		let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting) VALUES (?, ?, ?, ?, ?)");
 		stmt.run(req.body.id, req.query.cohortId, req.body.pathway, req.body.dueDate, req.body.weight);
 		res.redirect("/cohorts/"+req.query.cohortId);
