@@ -80,7 +80,7 @@ db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
-db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
 db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 1)");
@@ -467,16 +467,15 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 app.get("/cohorts/:cohortId/createprojects", (req, res) => {
 		// TODO: fix this code that jack clearly wrote while he was asleep
 		let cohortId = req.params.cohortId;
-		let studentIds = db.prepare("SELECT studentId FROM cohortsMemberships WHERE cohortId = ? AND (assignedChoice IS NOT NULL OR assignedChoice = '');").all(cohortId);
-		for (let i = 0; i < studentIds.length; i++) {
-			let assignedChoiceId = db.prepare("SELECT assignedChoice FROM cohortsMemberships WHERE cohortId = ? AND studentId = ?").get(cohortId, studentIds[i].studentId);
-			let projId = db.prepare("INSERT INTO projects(projectProposalId, cohortId) VALUES (?, ?)").run(assignedChoiceId.assignedChoice, cohortId).lastInsertRowid;
-			db.prepare("INSERT INTO projectsStudents(projectId, studentId) VALUES (?, ?)").run(projId, studentIds[i].studentId);
-			let supervisorId = db.prepare("SELECT supervisorId FROM projectProposalsSupervisors WHERE projectProposalId = ?").get(assignedChoiceId.assignedChoice);
-			for (let j =0; j < supervisorId; j++){
-				db.prepare("INSERT INTO projectsSupervisors(projectId, supervisorId) VALUES (?, ?)").run(projId, supervisorId[i].supervisorId);
+		let memberships = db.prepare("SELECT studentId, assignedChoice FROM cohortsMemberships WHERE cohortId = ? AND assignedChoice IS NOT NULL").all(cohortId);
+		for (let i = 0; i < memberships.length; i++) {
+			let projId = db.prepare("INSERT INTO projects(projectProposalId, cohortId) VALUES (?, ?)").run(memberships[i].assignedChoice, cohortId).lastInsertRowid;
+			db.prepare("INSERT INTO projectsStudents(projectId, studentId) VALUES (?, ?)").run(projId, memberships[i].studentId);
+			let supervisorId = db.prepare("SELECT supervisorId FROM projectProposalsSupervisors WHERE projectProposalId = ?").all(memberships[i].assignedChoice);
+			for (let j =0; j < supervisorId.length; j++){
+				db.prepare("INSERT INTO projectsSupervisors(projectId, supervisorId) VALUES (?, ?)").run(projId, supervisorId[j].supervisorId);
 			}
-			db.prepare("UPDATE cohortsMemberships SET projectId = ? WHERE cohortId = ? AND studentId = ?").run(projId, cohortId, studentIds[i].studentId);
+			db.prepare("UPDATE cohortsMemberships SET projectId = ? WHERE cohortId = ? AND studentId = ?").run(projId, cohortId, memberships[i].studentId);
 		}
 		res.redirect("/cohorts/" + cohortId);
 	 
@@ -925,6 +924,13 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 	}
 });
 
+// TODO: if we change the user in settings we need to update the session copy of user
+
+function getProjectsBySupervisorId(supervisorId) {
+	let stmt = db.prepare("SELECT projects.* FROM projectsSupervisors LEFT JOIN projects ON projectsSupervisors.projectId = projects.id WHERE supervisorId = ?");
+	return stmt.all(supervisorId);
+}
+
 app.get("/overview", (req, res) => {
 	if(req.session.user.isStudent) {
 		try {
@@ -945,9 +951,12 @@ app.get("/overview", (req, res) => {
 			res.redirect("/pathways");
 		}
 	} else {
+		let projectsSupervising = getProjectsBySupervisorId(req.session.user.id);
+
+		// TODO: add project title when we have a view for filled projects
 		res.render("overview", {
-			user: getUserById(req.session.user.id),
-			cohorts: getCohortsAndCohortsMembershipByStudentId(req.session.user.id)
+			cohorts: getCohortsAndCohortsMembershipByStudentId(req.session.user.id),
+			projectsSupervising: projectsSupervising
 		});
 	}
 });
