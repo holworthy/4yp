@@ -45,6 +45,7 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS pathwaysModerators (pathwayId INTEGER, moderatorId INTEGER, UNIQUE(pathwayId, moderatorId), FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
+db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
 // TODO: does name need to be unique?
@@ -164,7 +165,7 @@ function getAllPathways() {
 }
 
 function getProjectById(projectId) {
-	let stmt = db.prepare("SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id WHERE projects.id = ?");
+	let stmt = db.prepare("SELECT * FROM projectsFilled WHERE id = ?");
 	return stmt.get(projectId);
 }
 
@@ -927,7 +928,7 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 // TODO: if we change the user in settings we need to update the session copy of user
 
 function getProjectsBySupervisorId(supervisorId) {
-	let stmt = db.prepare("SELECT projects.* FROM projectsSupervisors LEFT JOIN projects ON projectsSupervisors.projectId = projects.id WHERE supervisorId = ?");
+	let stmt = db.prepare("SELECT projectsFilled.* FROM projectsSupervisors LEFT JOIN projectsFilled ON projectsSupervisors.projectId = projectsFilled.id WHERE supervisorId = ?");
 	return stmt.all(supervisorId);
 }
 
@@ -1014,6 +1015,11 @@ function getSubmissionFilesBySubmissionId(submissionId) {
 	return stmt.all(submissionId);
 }
 
+function getSubmissionsByProjectId(projectId) {
+	let stmt = db.prepare("SELECT submissions.*, users.name AS studentName FROM submissions LEFT JOIN users ON submissions.studentId = users.id WHERE projectId = ?");
+	return stmt.all(projectId);
+}
+
 // TODO: for the love of all things good this needs a refactor
 app.get("/projects/:projectId", (req, res) => {
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
@@ -1032,7 +1038,8 @@ app.get("/projects/:projectId", (req, res) => {
 		projectStudents: projectStudentsStmt.all(req.params.projectId),
 		projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
 		deliverables: deliverables,
-		submissions: getSubmissionsByProjectIdAndStudentId(project.id, req.session.user.id)
+		submissions: getSubmissionsByProjectIdAndStudentId(project.id, req.session.user.id),
+		allProjectSubmissions: getSubmissionsByProjectId(req.params.projectId)
 	});
 });
 

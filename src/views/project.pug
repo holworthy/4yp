@@ -59,3 +59,10 @@ html(lang="en")
 					a(href="/users/"+supervisor.id) #{supervisor.name}
 				if projectSupervisors.length == 0
 					p No supervisors assigned yet
+
+				h3 Submissions
+				each submission in allProjectSubmissions
+					p
+						a(href="/submission/" + submission.id) #{submission.createdOn}
+						|  by 
+						a(href="/users/" + submission.studentId) #{submission.studentName}
