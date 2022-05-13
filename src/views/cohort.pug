@@ -64,7 +64,17 @@ html(lang="en")
 				div.m1-top
 					input#student-name-input(type="text", placeholder="Type a student name")
 					#student-box
-
+			.m2-top 
+				h2 Add Deliverables 
+				a(href="/Deliverable/new") Create New Deliverable 
+				h4 Search 
+				input#deliverable-name-input(type="text", placeholder="Type a deliverable name")
+				#deliverable-box
+				h3 current deliverables 
+				ul 
+					each deliverable in deliverables 
+						li 
+							a(href="/deliverable/"+deliverable.id) #{deliverable.name}
 			.m2-top
 				h2 Assign Projects
 				p.red-text WARNING: THIS ACTION IS NOT REVERSIBLE!

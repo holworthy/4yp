@@ -44,8 +44,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId 
 
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
-db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, pathwayId INTEGER, name TEXT, type INTEGER, FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
-db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectMembershipId INTEGER, file TEXT, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectMembershipId) REFERENCES projectMemberships(id))");
+db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
@@ -341,12 +340,16 @@ app.get("/cohorts/:cohortId", (req, res) => {
 
 		let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, COUNT(projectsStudents.projectId) AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN projectsStudents ON projects.id = projectsStudents.projectId WHERE cohortId = ? GROUP BY projects.id");
 		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId); 
+
+		let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.* FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
 		
 		res.render("cohort", {
 			cohort: cohort,
-			cohortStudents: cohortStudents
+			cohortStudents: cohortStudents,
+			deliverables: deliverables
 		});
 	} catch(e) {
+		console.log(e);
 		res.redirect("/cohorts");
 	}
 });
@@ -450,6 +453,37 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 	edge from supervisor to sink (cap: dependant, cost: 0)
 	sink vertex
 	*/
+});
+
+app.get("/api/all-pathways", (req, res) => {
+	res.setHeader("Content-Type", "application/json");
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("SELECT * FROM pathways"); // TODO: check for SQL injection
+		res.send(JSON.stringify(stmt.all()));
+	}
+});
+
+app.post("/api/add-deliverable-to-cohort", (req, res) => {
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting) VALUES (?, ?, ?, ?, ?)");
+		stmt.run(req.body.id, req.query.cohortId, req.body.pathway, req.body.dueDate, req.body.weight);
+		res.redirect("/cohorts/"+req.query.cohortId);
+	}
+});
+
+app.get("/api/deliverable-search", (req, res) => {
+	res.setHeader("Content-Type", "application/json");
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("SELECT * FROM deliverables WHERE deliverables.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
+		console.log(stmt.all(req.query.name));
+		res.send(JSON.stringify(stmt.all(req.query.name)));
+	}
 });
 
 app.get("/cohorts/:cohortId/createprojects", (req, res) => {
@@ -647,26 +681,26 @@ app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 		res.redirect("/pathways");
 	}
 });
-app.get("/pathways/:pathwayId/deliverables", (req, res) => {
-	res.render("pathway-deliverables", {
-		pathway: getPathwayById(req.params.pathwayId),
-		deliverables: getDeliverablesByPathwayId(req.params.pathwayId)
-	});
-});
-app.get("/pathways/:pathwayId/deliverables/new", (req, res) => {
-	res.render("pathway-deliverables-new");
-});
-app.post("/pathways/:pathwayId/deliverables/new", (req, res) => {
-	let stmt = db.prepare("INSERT INTO deliverables (pathwayId, name, weighting, type) VALUES (?, ?, ?, ?)");
-	let result = stmt.run(req.params.pathwayId, req.body.name, req.body.weighting, 0);
-	res.redirect("/pathways/"+req.params.pathwayId+"/deliverables/" + result.lastInsertRowid);
-});
-app.get("/pathways/:pathwayId/deliverables/:deliverableId", (req, res) => {
-	res.render("pathway-deliverable", {
-		pathway: getPathwayById(req.params.pathwayId),
-		deliverable: getDeliverableById(req.params.deliverableId)
-	});
-});
+// app.get("/pathways/:pathwayId/deliverables", (req, res) => {
+// 	res.render("pathway-deliverables", {
+// 		pathway: getPathwayById(req.params.pathwayId),
+// 		deliverables: getDeliverablesByPathwayId(req.params.pathwayId)
+// 	});
+// });
+// app.get("/pathways/:pathwayId/deliverables/new", (req, res) => {
+// 	res.render("pathway-deliverables-new");
+// });
+// app.post("/pathways/:pathwayId/deliverables/new", (req, res) => {
+// 	let stmt = db.prepare("INSERT INTO deliverables (pathwayId, name, weighting, type) VALUES (?, ?, ?, ?)");
+// 	let result = stmt.run(req.params.pathwayId, req.body.name, req.body.weighting, 0);
+// 	res.redirect("/pathways/"+req.params.pathwayId+"/deliverables/" + result.lastInsertRowid);
+// });
+// app.get("/pathways/:pathwayId/deliverables/:deliverableId", (req, res) => {
+// 	res.render("pathway-deliverable", {
+// 		pathway: getPathwayById(req.params.pathwayId),
+// 		deliverable: getDeliverableById(req.params.deliverableId)
+// 	});
+// });
 
 // TODO: this assumes that each student is only in one cohort. need to get the cohort from the req
 // TODO: this should return some json rather than use HTTP response codes
