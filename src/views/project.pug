@@ -63,6 +63,6 @@ html(lang="en")
 				h3 Submissions
 				each submission in allProjectSubmissions
 					p
-						a(href="/submission/" + submission.id) #{submission.createdOn}
+						a(href="/submissions/" + submission.id) #{submission.createdOn}
 						|  by 
 						a(href="/users/" + submission.studentId) #{submission.studentName}

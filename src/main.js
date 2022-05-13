@@ -51,7 +51,7 @@ db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BE
 // TODO: does name need to be unique?
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id))");
-db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, name TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, UNIQUE(deliverableId, cohortId, pathwayId), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 
@@ -1011,7 +1011,7 @@ function getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverableId, pr
 }
 
 function getSubmissionFilesBySubmissionId(submissionId) {
-	let stmt = db.prepare("SELECT * FROM submissionFiles WHERE submissionId = ?");
+	let stmt = db.prepare("SELECT * FROM submissionsFiles WHERE submissionId = ?");
 	return stmt.all(submissionId);
 }
 
@@ -1089,11 +1089,28 @@ app.post("/projects/:projectId/makesubmission/:deliverableId", (req, res) => {
 		let newFileName = "/uploads/" + file.md5 + "." + fileNameParts[fileNameParts.length - 1];
 		file.mv(newFileName);
 
-		let stmt = db.prepare("INSERT INTO submissionsFiles(submissionId, url) VALUES (?, ?)");
-		stmt.run(submissionId, newFileName);
+		let stmt = db.prepare("INSERT INTO submissionsFiles(submissionId, url, name) VALUES (?, ?, ?)");
+		stmt.run(submissionId, newFileName, file.name);
 	}
 
 	res.redirect("/projects/" + req.params.projectId);
+});
+
+app.get("/submissions", (req, res) => {
+	// TODO: do something useful with this
+});
+
+function getSubmissionById(submissionId) {
+	let stmt = db.prepare("SELECT submissions.*, projectsFilled.*, deliverables.name AS deliverableName, users.name AS studentName FROM submissions LEFT JOIN projectsFilled ON submissions.projectId = projectsFilled.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN users ON submissions.studentId = users.id WHERE submissions.id = ?");
+	return stmt.get(submissionId);
+}
+
+app.get("/submissions/:submissionId", (req, res) => {
+	let submissionId = req.params.submissionId;
+	res.render("submission", {
+		submission: getSubmissionById(submissionId),
+		submissionFiles: getSubmissionFilesBySubmissionId(submissionId)
+	});
 });
 
 app.listen(8080);
