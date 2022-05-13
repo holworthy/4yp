@@ -362,7 +362,6 @@ app.get("/cohorts/:cohortId", (req, res) => {
 		let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
 		
 		let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName, markschemes.name AS markschemeName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id LEFT JOIN markschemes ON deliverablesMemberships.markschemeId = markschemes.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
-		console.log(deliverables);
 
 		res.render("cohort", {
 			cohort: cohort,
@@ -492,7 +491,6 @@ app.get("/api/all-markschemes", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		let stmt = db.prepare("SELECT * FROM markschemes"); // TODO: check for SQL injection
-		console.log(stmt.all());
 		res.send(JSON.stringify(stmt.all()));
 	}
 });
@@ -512,7 +510,6 @@ app.post("/api/change-deliverable-in-cohort", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		// TODO: check date formats are good
-		console.log(req.body.markscheme);
 		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ?, markschemeId = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
 		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.markscheme, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
 		res.setHeader("Content-Type", "application/json");
@@ -537,7 +534,6 @@ app.get("/api/deliverable-search", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		let stmt = db.prepare("SELECT * FROM deliverables WHERE deliverables.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
-		console.log(stmt.all(req.query.name));
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
 });
@@ -616,7 +612,6 @@ app.post("/api/tag-search", (req, res) => {
 		for (let i = 0; i < tagIds.length; i ++)
 			strStmt += " AND NOT id = "+tagIds[i];
 		strStmt += " LIMIT 5";
-		console.log(strStmt);
 		let stmt = db.prepare(strStmt);
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
@@ -846,11 +841,10 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	let title = req.body.title;
 	let description = req.body.description;
 
-	let media = req.files ? req.files.media ? req.files.media : [] : [];
+	let media = req.files ? req.files.media.length ? req.files.media : [req.files.media] : [];
 	let mediaUrls = [];
 	for(let i = 0; i < media.length; i++) {
 		let file = media[i];
-		// console.log(file);
 		if(file.truncated) {
 			// TODO: file too big!
 		} else {
@@ -886,10 +880,12 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	let stmt6 = db.prepare("INSERT INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (?, ?)");
 	stmt6.run(projectProposal.id, req.session.user.id);
 
-	let tags = req.body.tags.split(",");
-	for (let i = 0; i < tags.length; i++){
-		let stmt7 = db.prepare("INSERT INTO projectProposalsTags(projectProposalId, tagId) VALUES (?, ?)");
-		stmt7.run(projectProposal.id, tags[i]);
+	if(req.body.tags != "") {
+		let tags = req.body.tags.split(",");
+		for (let i = 0; i < tags.length; i++){
+			let stmt7 = db.prepare("INSERT INTO projectProposalsTags(projectProposalId, tagId) VALUES (?, ?)");
+			stmt7.run(projectProposal.id, tags[i]);
+		}
 	}
 
 	res.send(JSON.stringify(projectProposal.id));
