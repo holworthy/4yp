@@ -19,12 +19,12 @@ let db = betterSqlite3("database.db");
 
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
-db.exec("CREATE TABLE IF NOT EXISTS markSchemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-db.exec("CREATE TABLE IF NOT EXISTS markSchemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id) ON DELETE CASCADE)");
-db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markSchemeId INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id) ON DELETE CASCADE)");
-db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markSchemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markSchemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markSchemePartId) REFERENCES markSchemeParts(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS markschemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+db.exec("CREATE TABLE IF NOT EXISTS markschemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markschemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markschemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markschemePartId) REFERENCES markschemeParts(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markSchemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markSchemeId) REFERENCES markSchemes(id) ON DELETE RESTRICT, FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE SET DEFAULT)");
+db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markschemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE RESTRICT, FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE SET DEFAULT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INTEGER, url TEXT, type TEXT, UNIQUE(projectProposalId, url), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -71,20 +71,20 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 
-db.exec("INSERT OR IGNORE INTO markSchemes(name) VALUES ('Mark Scheme 1')");
-db.exec("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES ('Amazingness', 100.0, 1)");
+db.exec("INSERT OR IGNORE INTO markschemes(name) VALUES ('Mark Scheme 1')");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Amazingness', 100.0, 1)");
 
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
 // db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
 
 // db.exec("UPDATE OR IGNORE cohortsMemberships SET projectid = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markSchemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
@@ -113,24 +113,24 @@ function getAllUsers() {
 	return stmt.all();
 }
 
-function getMarkSchemeById(markSchemeId) {
-	let stmt1 = db.prepare("SELECT * FROM markSchemes WHERE id = ?");
-	let markScheme = stmt1.get(markSchemeId);
+function getMarkSchemeById(markschemeId) {
+	let stmt1 = db.prepare("SELECT * FROM markschemes WHERE id = ?");
+	let markscheme = stmt1.get(markschemeId);
 
-	let stmt2 = db.prepare("SELECT * FROM markSchemesParts WHERE markSchemeId = ?");
-	markScheme.parts = stmt2.all(markSchemeId);
+	let stmt2 = db.prepare("SELECT * FROM markschemesParts WHERE markschemeId = ?");
+	markscheme.parts = stmt2.all(markschemeId);
 
-	return markScheme;
+	return markscheme;
 }
 
 function getAllMarkSchemes() {
-	let stmt = db.prepare("SELECT * FROM markSchemes");
+	let stmt = db.prepare("SELECT * FROM markschemes");
 	return stmt.all();
 }
 
-function getMarkSchemePartById(markSchemePartId) {
-	let stmt = db.prepare("SELECT * FROM markSchemeParts WHERE id = ?");
-	return stmt.all(markSchemePartId);
+function getMarkSchemePartById(markschemePartId) {
+	let stmt = db.prepare("SELECT * FROM markschemeParts WHERE id = ?");
+	return stmt.all(markschemePartId);
 }
 
 function getMarkschemePartsByMarkshemeId(markschemeId) {
@@ -534,6 +534,16 @@ app.get("/api/all-pathways", (req, res) => {
 	}
 });
 
+app.get("/api/all-markschemes", (req, res) => {
+	res.setHeader("Content-Type", "application/json");
+	if(!req.session.loggedIn) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("SELECT * FROM markschemes"); // TODO: check for SQL injection
+		res.send(JSON.stringify(stmt.all()));
+	}
+});
+
 app.post("/api/remove-deliverable-in-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
@@ -549,8 +559,8 @@ app.post("/api/change-deliverable-in-cohort", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		// TODO: check date formats are good
-		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
-		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
+		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ?, markschemeId = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
+		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.markscheme, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
 		res.setHeader("Content-Type", "application/json");
 		res.send(JSON.stringify(true));
 	}
@@ -573,7 +583,6 @@ app.get("/api/deliverable-search", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		let stmt = db.prepare("SELECT * FROM deliverables WHERE deliverables.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
-		console.log(stmt.all(req.query.name));
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
 });
@@ -652,7 +661,6 @@ app.post("/api/tag-search", (req, res) => {
 		for (let i = 0; i < tagIds.length; i ++)
 			strStmt += " AND NOT id = "+tagIds[i];
 		strStmt += " LIMIT 5";
-		console.log(strStmt);
 		let stmt = db.prepare(strStmt);
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
@@ -882,11 +890,10 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	let title = req.body.title;
 	let description = req.body.description;
 
-	let media = req.files ? req.files.media ? req.files.media : [] : [];
+	let media = req.files ? req.files.media.length ? req.files.media : [req.files.media] : [];
 	let mediaUrls = [];
 	for(let i = 0; i < media.length; i++) {
 		let file = media[i];
-		// console.log(file);
 		if(file.truncated) {
 			// TODO: file too big!
 		} else {
@@ -922,10 +929,12 @@ app.post("/api/projectproposals/upload", (req, res) => {
 	let stmt6 = db.prepare("INSERT INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (?, ?)");
 	stmt6.run(projectProposal.id, req.session.user.id);
 
-	let tags = req.body.tags.split(",");
-	for (let i = 0; i < tags.length; i++){
-		let stmt7 = db.prepare("INSERT INTO projectProposalsTags(projectProposalId, tagId) VALUES (?, ?)");
-		stmt7.run(projectProposal.id, tags[i]);
+	if(req.body.tags != "") {
+		let tags = req.body.tags.split(",");
+		for (let i = 0; i < tags.length; i++){
+			let stmt7 = db.prepare("INSERT INTO projectProposalsTags(projectProposalId, tagId) VALUES (?, ?)");
+			stmt7.run(projectProposal.id, tags[i]);
+		}
 	}
 
 	res.send(JSON.stringify(projectProposal.id));
@@ -972,27 +981,27 @@ app.post("/api/markschemes/new", (req, res) => {
 	let name = req.body.name;
 	let parts = req.body.parts;
 
-	let stmt = db.prepare("INSERT OR IGNORE INTO markSchemes(name) VALUES (?)");
+	let stmt = db.prepare("INSERT OR IGNORE INTO markschemes(name) VALUES (?)");
 	stmt.run(name);
 
 	// TODO: check if this fails
-	stmt = db.prepare("SELECT id, name FROM markSchemes WHERE name = ?");
-	let markSchemeId = stmt.get(name).id;
+	stmt = db.prepare("SELECT id, name FROM markschemes WHERE name = ?");
+	let markschemeId = stmt.get(name).id;
 
 	for(let i = 0; i < parts.length; i++) {
 		let part = parts[i];
-		stmt = db.prepare("INSERT OR IGNORE INTO markSchemesParts(name, weight, markSchemeId) VALUES (?, ?, ?)");
-		stmt.run(part.name, part.weight, markSchemeId);
+		stmt = db.prepare("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES (?, ?, ?)");
+		stmt.run(part.name, part.weight, markschemeId);
 		// TODO: check if this fails
 	}
 
 	res.setHeader("Content-Type", "application/json");
 	res.send(JSON.stringify({
-		markSchemeId: markSchemeId
+		markschemeId: markschemeId
 	}));
 });
 app.get("/markschemes/:id", (req, res) => res.render("markscheme", {
-	markScheme: getMarkSchemeById(req.params.id)
+	markscheme: getMarkSchemeById(req.params.id)
 }));
 
 // modules
