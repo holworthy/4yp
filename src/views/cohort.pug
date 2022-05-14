@@ -15,7 +15,28 @@ html(lang="en")
 
 					a.m1-top(href="/cohorts/"+cohort.id+"/pathways") Pick a pathway
 				else
-					p You have already picked your projects
+					p Your choices have been confirmed!
+					if membership.choice1
+						p Choice 1: 
+							a(href="/projectproposals/"+membership.choice1) #{membership.choice1Title}
+							|  by  
+							a(href="/users/"+membership.choice1CreatedBy) #{membership.choice1CreatedByName}
+						if membership.choice2
+							p Choice 2: 
+								a(href="/projectproposals/"+membership.choice2) #{membership.choice2Title}
+								|  by  
+								a(href="/users/"+membership.choice2CreatedBy) #{membership.choice2CreatedByName}
+							if membership.choice3
+								p Choice 3: 
+									a(href="/projectproposals/"+membership.choice3) #{membership.choice3Title}
+									|  by  
+									a(href="/users/"+membership.choice3CreatedBy) #{membership.choice3CreatedByName}
+							else
+								p You did not select a third choice.
+						else
+							p You did not select a second or third choice.
+					else
+						p You did not select any choices.
 
 			if user.isAdmin
 				div
