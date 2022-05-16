@@ -1,5 +1,4 @@
 // imports
-
 let express = require("express");
 let expressSession = require("express-session");
 let betterSqlite3 = require("better-sqlite3");
@@ -11,12 +10,11 @@ let mime = require("mime-types");
 let compression = require("compression");
 let minify = require("express-minify");
 
+// database
 let db = betterSqlite3("database.db");
 
 // table definitions
-
 // TODO: set all foreign keys on delete
-
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
 db.exec("CREATE TABLE IF NOT EXISTS markschemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
@@ -77,9 +75,6 @@ db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALU
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
-// db.exec("INSERT OR IGNORE INTO projects(projectProposalId) VALUES (1)");
-
-// db.exec("UPDATE OR IGNORE cohortsMemberships SET projectid = 1 WHERE studentId = 5");
 
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
@@ -101,8 +96,7 @@ db.exec("INSERT OR IGNORE INTO deliverables(name) VALUES ('Deliverable 1'), ('De
 db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (1, 1, 1, '2022-05-20', 50, 1)");
 db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (3, 1, 1, '2022-05-20', 50, 1)");
 
-// class definitions
-
+// function definitions
 function getUserById(userId) {
 	let stmt = db.prepare("SELECT * FROM users WHERE id = ?");
 	return stmt.get(userId);
@@ -193,20 +187,67 @@ function getDeliverablesByPathwayId(pathwayId) {
 	return stmt.all(pathwayId);
 }
 
-// web server
+function getProjectProposalsByPathwayId(pathwayId) {
+	let stmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways LEFT JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
+	return stmt.all(pathwayId);
+}
 
+function getProjectsBySupervisorId(supervisorId) {
+	let stmt = db.prepare("SELECT projectsFilled.* FROM projectsSupervisors LEFT JOIN projectsFilled ON projectsSupervisors.projectId = projectsFilled.id WHERE supervisorId = ?");
+	return stmt.all(supervisorId);
+}
+
+function getAllProjects() {
+	let stmt = db.prepare("SELECT * FROM projects");
+	return stmt.all();
+}
+
+function getSubmissionsByProjectIdAndStudentId(projectId, studentId) {
+	let stmt = db.prepare("SELECT * FROM submissions WHERE projectId = ? AND studentId = ?");
+	return stmt.all(projectId, studentId);
+}
+
+function getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverableId, projectId, studentId) {
+	let stmt = db.prepare("SELECT * FROM submissions WHERE deliverableId = ? AND projectId = ? AND studentId = ?");
+	return stmt.all(deliverableId, projectId, studentId);
+}
+
+function getSubmissionFilesBySubmissionId(submissionId) {
+	let stmt = db.prepare("SELECT * FROM submissionsFiles WHERE submissionId = ?");
+	return stmt.all(submissionId);
+}
+
+function getSubmissionsByProjectId(projectId) {
+	let stmt = db.prepare("SELECT submissions.*, users.name AS studentName FROM submissions LEFT JOIN users ON submissions.studentId = users.id WHERE projectId = ?");
+	return stmt.all(projectId);
+}
+
+function getSubmissionById(submissionId) {
+	let stmt = db.prepare("SELECT projectsFilled.*, deliverables.name AS deliverableName, users.name AS studentName, submissions.* FROM submissions LEFT JOIN projectsFilled ON submissions.projectId = projectsFilled.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN users ON submissions.studentId = users.id WHERE submissions.id = ?");
+	return stmt.get(submissionId);
+}
+
+function getDeliverablesMembershipsByDeliverableId(deliverableId) {
+	let stmt = db.prepare("SELECT cohorts.name AS cohortName, pathways.name AS pathwayName, deliverablesMemberships.* FROM deliverablesMemberships LEFT JOIN cohorts ON deliverablesMemberships.cohortId = cohorts.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverableId = ?");
+	return stmt.all(deliverableId);
+}
+
+// web server
 let app = express();
 let cacheAge = 604800000;
 
-app.use(bodyParser.urlencoded({
-	extended: false
-}));
+// express middlewares
+app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
-app.use(compression({
-	threshold: 0
-}));
+app.use(compression({threshold: 0}));
 app.use(minify());
-["css", "js", "fonts"].forEach(value => app.use("/" + value, express.static("./" + value, {maxAge: cacheAge})));
+app.use("/css", express.static("css", {maxAge: cacheAge}));
+app.use("/js", express.static("js", {maxAge: cacheAge}));
+app.use("/fonts", express.static("fonts", {maxAge: cacheAge}));
+app.use("/img", express.static("img", {maxAge: cacheAge}));
+// TODO: decide if we want to cache these
+app.use("/media", express.static("./media"));
+app.use("/uploads", express.static("./uploads"));
 app.set("view engine", "pug");
 app.use(expressSession({
 	store: new (betterSqlite3SessionStore(expressSession))({
@@ -223,13 +264,10 @@ app.use(expressFileUpload({
 		fileSize: 50 * (1 << 20)
 	}
 }));
-
-// log page in console
 app.use((req, res, next) => {
 	console.log(new Date(), req.path);
 	next();
 });
-
 // remove trailing slashes from urls
 app.use((req, res, next) => {
 	if(req.path.endsWith("/") && req.path != "/")
@@ -241,9 +279,6 @@ app.use((req, res, next) => {
 // root
 app.get("/", (req, res) => res.redirect(req.session.loggedIn ? "/overview" : "/login"));
 
-// favicon
-app.get("/uea.png", (req, res) => res.sendFile("uea.png", {root: ".", maxAge: cacheAge}));
-
 // about page
 app.get("/about", (req, res) => res.render("about"));
 
@@ -254,6 +289,7 @@ app.get("/login", (req, res) => {
 	else
 		res.render("login");
 });
+
 app.post("/login", (req, res) => {
 	let email = req.body.email;
 	let password = req.body.password;
@@ -319,9 +355,11 @@ app.get("/cohorts", (req, res) => {
 		cohorts: stmt.all()
 	})
 });
+
 app.get("/cohorts/new", (req, res) => {
 	res.render("cohorts-new");
 });
+
 app.post("/cohorts/new", (req, res) => {
 	let name = req.body.name;
 	if(name) {
@@ -341,6 +379,7 @@ app.post("/cohorts/new", (req, res) => {
 		res.redirect("/cohorts/new"); // TODO: add error message
 	}
 });
+
 app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
 
 // TODO: update student view of this page
@@ -481,11 +520,6 @@ app.get("/cohorts/:cohortId/pathways", (req, res) => {
 	});
 });
 
-function getProjectProposalsByPathwayId(pathwayId) {
-	let stmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways LEFT JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
-	return stmt.all(pathwayId);
-}
-
 // TODO: move /pathways/:pathwayId here
 app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 	// res.render("cohort-pathway", {
@@ -613,6 +647,7 @@ app.get("/api/student-search", (req, res) => {
 		res.send(JSON.stringify(stmt.all(req.query.name)));
 	}
 });
+
 app.get("/api/add-student-to-cohort", (req, res) => {
 	res.setHeader("Content-Type", "application/json");
 	// TODO: permission check
@@ -625,7 +660,6 @@ app.get("/api/add-student-to-cohort", (req, res) => {
 	}
 });
 
-app.use("/uploads", express.static("./uploads"));
 app.post("/projectproposal/new", (req, res) => {
 	if(req.session.loggedIn) {
 		let title = req.body.title;
@@ -670,6 +704,7 @@ app.get("/pathways", (req, res) => res.render("pathways", {
 	user: req.session.user,
 	pathways: getAllPathways()
 }));
+
 app.get("/pathways/new", (req, res) => res.render("pathways-new"));
 app.post("/pathways/new", (req, res) => {
 	let name = req.body.name;
@@ -690,6 +725,7 @@ app.post("/pathways/new", (req, res) => {
 		res.redirect("/pathways/new"); // TODO: add error message
 	}
 });
+
 app.get("/pathways/:id", (req, res) => {
 	if(req.session.user.isStudent) {
 		res.redirect(req.url + "/projectproposals");
@@ -756,31 +792,33 @@ app.get("/pathways/:id", (req, res) => {
 });
 
 // TODO: this only allows choices for first cohort user is in
-app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
-	let pathwayId = req.params.pathwayId;
-	try{
-		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
-		let projectProposals = projectProposalsStmt.all(pathwayId);
+// TODO: should this be deleted?
+// app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
+// 	let pathwayId = req.params.pathwayId;
+// 	try{
+// 		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
+// 		let projectProposals = projectProposalsStmt.all(pathwayId);
 
-		let getCS = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-		let rowCS = getCS.get(req.session.user.id);
+// 		let getCS = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
+// 		let rowCS = getCS.get(req.session.user.id);
 
-		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice1); 
-		let choice2 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice2);
-		let choice3 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice3);
-		let choices = [choice1, choice2, choice3];
+// 		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice1); 
+// 		let choice2 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice2);
+// 		let choice3 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice3);
+// 		let choices = [choice1, choice2, choice3];
 
-		res.render("pathway-projectproposals", {
-			pathway: getPathwayById(pathwayId),
-			projectProposals: projectProposals,
-			choices: choices
-		});
-	}
-	catch(e) {
-		console.log(e);
-		res.redirect("/pathways");
-	}
-});
+// 		res.render("pathway-projectproposals", {
+// 			pathway: getPathwayById(pathwayId),
+// 			projectProposals: projectProposals,
+// 			choices: choices
+// 		});
+// 	}
+// 	catch(e) {
+// 		console.log(e);
+// 		res.redirect("/pathways");
+// 	}
+// });
+
 // app.get("/pathways/:pathwayId/deliverables", (req, res) => {
 // 	res.render("pathway-deliverables", {
 // 		pathway: getPathwayById(req.params.pathwayId),
@@ -883,9 +921,11 @@ app.get("/projectproposals", (req, res) => {
 		approvedProjectProposals: approvedProjectProposalsStmt.all()
 	});
 });
+
 app.get("/projectproposals/new", (req, res) => {
 	res.render("projectproposals-new", {pathways: getAllPathways()});
 });
+
 app.post("/api/projectproposals/upload", (req, res) => {
 	let title = req.body.title;
 	let description = req.body.description;
@@ -939,6 +979,7 @@ app.post("/api/projectproposals/upload", (req, res) => {
 
 	res.send(JSON.stringify(projectProposal.id));
 });
+
 app.get("/projectproposals/:id", (req, res) => {
 	files = db.prepare("SELECT * FROM projectProposalsMedia WHERE projectProposalId = ?").all(req.params.id);
 	images = [];
@@ -964,6 +1005,7 @@ app.get("/projectproposals/:id", (req, res) => {
 		videos: videos
 	});
 });
+
 app.get("/api/projectproposals/:projectProposalId/approve", (req, res) => {
 	res.setHeader("Content-Type", "application/json");
 	try {
@@ -1000,6 +1042,7 @@ app.post("/api/markschemes/new", (req, res) => {
 		markschemeId: markschemeId
 	}));
 });
+
 app.get("/markschemes/:id", (req, res) => res.render("markscheme", {
 	markscheme: getMarkSchemeById(req.params.id)
 }));
@@ -1010,9 +1053,11 @@ app.get("/modules", (req, res) => {
 	let rows = stmt.all();
 	res.render("modules", {modules: rows});
 });
+
 app.get("/modules/new", (req, res) => {
 	res.render("modules-new");
 });
+
 app.post("/modules/new", (req, res) => {
 	let name = req.body.name;
 	let code = req.body.code;
@@ -1022,6 +1067,7 @@ app.post("/modules/new", (req, res) => {
 
 	res.redirect("/modules/" + result.lastInsertRowid);
 });
+
 app.get("/modules/:moduleId", (req, res) => {
 	let stmt = db.prepare("SELECT * FROM modules WHERE id = ?");
 	let row = stmt.get(req.params.moduleId);
@@ -1035,6 +1081,7 @@ app.get("/tags", (req, res) => {
 		tags: tagsStmt.all()
 	});
 });
+
 app.get("/api/tags/:tagId/delete", (req, res) => {
 	res.setHeader("Content-Type", "application/json");
 	try {
@@ -1048,11 +1095,6 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 });
 
 // TODO: if we change the user in settings we need to update the session copy of user
-
-function getProjectsBySupervisorId(supervisorId) {
-	let stmt = db.prepare("SELECT projectsFilled.* FROM projectsSupervisors LEFT JOIN projectsFilled ON projectsSupervisors.projectId = projectsFilled.id WHERE supervisorId = ?");
-	return stmt.all(supervisorId);
-}
 
 app.get("/overview", (req, res) => {
 	res.render("overview", {
@@ -1075,14 +1117,13 @@ app.get("/overview", (req, res) => {
 	});
 });
 
-app.use("/media", express.static("./media"));
-
 app.get("/marking", (req, res) => {
 	res.render("marking", {
 		markscheme: getMarkSchemeById(1),
 		markschemeParts: getMarkschemePartsByMarkshemeId(1)
 	});
 });
+
 app.get("/marking/:submissionId", (req, res) => {
 	// TODO: check we can actually mark this either as a supervisor or as a moderator
 	res.render("marking2", {
@@ -1092,6 +1133,7 @@ app.get("/marking/:submissionId", (req, res) => {
 		submissionFiles: getSubmissionFilesBySubmissionId(req.params.submissionId)
 	});
 });
+
 app.post("/api/marking", (req, res) => {
 	let submissionId = req.body.submissionId;
 	let submission = getSubmissionById(submissionId);
@@ -1104,11 +1146,6 @@ app.post("/api/marking", (req, res) => {
 	res.send("true");
 });
 
-function getAllProjects() {
-	let stmt = db.prepare("SELECT * FROM projects");
-	return stmt.all();
-}
-
 app.get("/projects", (req, res) => {
 	if (req.session.user.isStudent) {
 		let row1 = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?").all(req.session.user.id);
@@ -1119,26 +1156,6 @@ app.get("/projects", (req, res) => {
 	}
 	res.render("projects", {projects: getAllProjects()});
 });
-
-function getSubmissionsByProjectIdAndStudentId(projectId, studentId) {
-	let stmt = db.prepare("SELECT * FROM submissions WHERE projectId = ? AND studentId = ?");
-	return stmt.all(projectId, studentId);
-}
-
-function getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverableId, projectId, studentId) {
-	let stmt = db.prepare("SELECT * FROM submissions WHERE deliverableId = ? AND projectId = ? AND studentId = ?");
-	return stmt.all(deliverableId, projectId, studentId);
-}
-
-function getSubmissionFilesBySubmissionId(submissionId) {
-	let stmt = db.prepare("SELECT * FROM submissionsFiles WHERE submissionId = ?");
-	return stmt.all(submissionId);
-}
-
-function getSubmissionsByProjectId(projectId) {
-	let stmt = db.prepare("SELECT submissions.*, users.name AS studentName FROM submissions LEFT JOIN users ON submissions.studentId = users.id WHERE projectId = ?");
-	return stmt.all(projectId);
-}
 
 // TODO: for the love of all things good this needs a refactor
 app.get("/projects/:projectId", (req, res) => {
@@ -1170,6 +1187,7 @@ app.get("/preferences", (req, res) => {
 		pathwayModerators: stmt.all(req.session.user.id)
 	});
 });
+
 app.post("/api/save-pathway-moderation", (req, res) => {
 	let checkboxes = req.body
 	for(let i = 0; i < checkboxes.length; i++) {
@@ -1220,11 +1238,6 @@ app.get("/submissions", (req, res) => {
 	// TODO: do something useful with this
 });
 
-function getSubmissionById(submissionId) {
-	let stmt = db.prepare("SELECT projectsFilled.*, deliverables.name AS deliverableName, users.name AS studentName, submissions.* FROM submissions LEFT JOIN projectsFilled ON submissions.projectId = projectsFilled.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN users ON submissions.studentId = users.id WHERE submissions.id = ?");
-	return stmt.get(submissionId);
-}
-
 app.get("/submissions/:submissionId", (req, res) => {
 	let submissionId = req.params.submissionId;
 	res.render("submission", {
@@ -1237,11 +1250,6 @@ app.get("/submissions/:submissionId", (req, res) => {
 app.get("/deliverables", (req, res) => {
 	res.sendStatus(200);
 });
-
-function getDeliverablesMembershipsByDeliverableId(deliverableId) {
-	let stmt = db.prepare("SELECT cohorts.name AS cohortName, pathways.name AS pathwayName, deliverablesMemberships.* FROM deliverablesMemberships LEFT JOIN cohorts ON deliverablesMemberships.cohortId = cohorts.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverableId = ?");
-	return stmt.all(deliverableId);
-}
 
 // TODO: add description to deliverables
 app.get("/deliverables/:deliverableId", (req, res) => {
