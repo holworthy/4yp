@@ -6,12 +6,12 @@
 - [x] Get projects from supervisors
 - [x] Allow admins to approve or deny projects
 - [ ] Limit how many projects supervisors can supervise
-- [ ] Limit how many students can do a project
+	- [ ] Limit how many students can do a project
 - [x] Allow students to pick 3 projects
 - [x] Allow admins to add extra weighting to certain student choices
 	- [ ] For example if a student did a year in industry there may be a project that is specifically for them
 	- [x] Alternatively just allow admins to manually select a project for a student
-- [ ] Prioritise students choices
+- [x] Prioritise students choices
 - [ ] Projects should have a supervisor and a moderator
 - [ ] Allow admins to check supervisor and moderator marks
 - [ ] Email students once marks are approved

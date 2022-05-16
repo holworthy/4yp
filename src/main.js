@@ -390,23 +390,27 @@ app.get("/cohorts/:cohortId", (req, res) => {
 	if(!membership && req.session.user.isStudent) {
 		res.redirect("/cohorts");
 	} else {
-		try {
-			let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
-			let cohort = cohortStmt.get(req.params.cohortId);
-			
-			let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortsMemberships.cohortId = ?");
-			let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
-			
-			let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
-			
-			res.render("cohort", {
-				cohort: cohort,
-				cohortStudents: cohortStudents,
-				deliverables: deliverables,
-				membership: membership
-			});
-		} catch(e) {
-			res.redirect("/cohorts");
+		if(membership && membership.projectId) {
+			res.redirect("/projects/" + membership.projectId);
+		} else {
+			try {
+				let cohortStmt = db.prepare("SELECT * FROM cohorts WHERE id = ?");
+				let cohort = cohortStmt.get(req.params.cohortId);
+				
+				let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortsMemberships.cohortId = ?");
+				let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
+				
+				let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
+				
+				res.render("cohort", {
+					cohort: cohort,
+					cohortStudents: cohortStudents,
+					deliverables: deliverables,
+					membership: membership
+				});
+			} catch(e) {
+				res.redirect("/cohorts");
+			}
 		}
 	}
 });
@@ -840,25 +844,24 @@ app.get("/pathways/:id", (req, res) => {
 // 	});
 // });
 
-// TODO: this assumes that each student is only in one cohort. need to get the cohort from the req
 // TODO: this should return some json rather than use HTTP response codes
 app.post("/api/projectSelection/new", (req, res) => {
 	let projectId = req.body.projectId;
-	
-	let getCS = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-	let cS = getCS.get(req.session.user.id);
+	let cohortId = req.body.cohortId;
+	let studentId = req.session.user.id;
 
-	if(cS.choice1 == null) {
-		let choice1Stmt = db.prepare("UPDATE OR IGNORE cohortsMemberships SET choice1 = ? WHERE studentId = ?");
-		choice1Stmt.run(projectId, cS.studentId);
+	let membership = getCohortMembershipByCohortIdAndStudentId(cohortId, studentId);
+	if(membership.choice1 == null) {
+		let choice1Stmt = db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ? AND cohortId = ?");
+		choice1Stmt.run(projectId, membership.studentId, cohortId);
 		res.sendStatus(200);
-	} else if(cS.choice2 == null) {
-		let choice2Stmt = db.prepare("UPDATE OR IGNORE cohortsMemberships SET choice2 = ? WHERE studentId = ?");
-		choice2Stmt.run(projectId, cS.studentId);
+	} else if(membership.choice2 == null) {
+		let choice2Stmt = db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ? AND cohortId = ?");
+		choice2Stmt.run(projectId, membership.studentId, cohortId);
 		res.sendStatus(200);
-	} else if(cS.choice3 == null) {
-		let choice3Stmt = db.prepare("UPDATE OR IGNORE cohortsMemberships SET choice3 = ? WHERE studentId = ?");
-		choice3Stmt.run(projectId, cS.studentId);
+	} else if(membership.choice3 == null) {
+		let choice3Stmt = db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ? AND cohortId = ?");
+		choice3Stmt.run(projectId, membership.studentId, cohortId);
 		res.sendStatus(200);
 	}
 });
@@ -882,6 +885,7 @@ app.post("/api/projectSelection/remove", (req, res) => {
 	}
 });
 
+// TODO: this assumes that each student is only in one cohort. need to get the cohort from the req
 app.post("/api/projectSelection/swap", (req, res) => {
 	if (req.body.fromId == 0)
 		from = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice1;
