@@ -45,17 +45,19 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS pathwaysModerators (pathwayId INTEGER, moderatorId INTEGER, UNIQUE(pathwayId, moderatorId), FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
-db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
-db.exec("CREATE VIEW IF NOT EXISTS cohortsMembershipsFilled AS SELECT cohorts.name AS cohortName, cohorts.archived AS cohortArchived, u0.name AS studentName, pp1.title AS choice1Title, pp1.id AS choice1CreatedBy, u1.name AS choice1CreatedByName, pp2.title AS choice2Title, pp2.id AS choice2CreatedBy, u2.name AS choice2CreatedByName, pp3.title AS choice3Title, pp3.id AS choice3CreatedBy, u3.name AS choice3CreatedByName, pp4.title AS assignedChoiceTitle, pp4.id AS assignedChoiceCreatedBy, u4.name AS assignedChoiceCreatedByName, pathways.name AS pathwayName, cohortsMemberships.* FROM cohortsMemberships LEFT JOIN cohorts ON cohortsMemberships.cohortId = cohorts.id LEFT JOIN users u0 ON cohortsMemberships.studentId = u0.id LEFT JOIN projectproposals pp1 ON cohortsMemberships.choice1 = pp1.id LEFT JOIN users u1 ON choice1createdBy = u1.id LEFT JOIN projectproposals pp2 ON cohortsMemberships.choice2 = pp2.id LEFT JOIN users u2 ON choice2createdBy = u2.id LEFT JOIN projectproposals pp3 ON cohortsMemberships.choice3 = pp3.id LEFT JOIN users u3 ON choice3createdBy = u3.id LEFT JOIN projectproposals pp4 ON cohortsMemberships.assignedChoice = pp4.id LEFT JOIN users u4 ON assignedChoiceCreatedBy = u4.id LEFT JOIN pathways ON cohortsMemberships.pathwayId = pathways.id;");
-
-db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
-
 // TODO: does name need to be unique?
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, name TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
-db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, supervisorId INTEGER, UNIQUE(submissionId, supervisorId), FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (supervisorId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, markerId INTEGER, UNIQUE(submissionId, markerId), FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markerId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, markschemeId INTEGER, UNIQUE(deliverableId, cohortId, pathwayId), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id), FOREIGN KEY (markschemeId) REFERENCES markschemes(id))");
+
+db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
+db.exec("CREATE VIEW IF NOT EXISTS cohortsMembershipsFilled AS SELECT cohorts.name AS cohortName, cohorts.archived AS cohortArchived, u0.name AS studentName, pp1.title AS choice1Title, pp1.id AS choice1CreatedBy, u1.name AS choice1CreatedByName, pp2.title AS choice2Title, pp2.id AS choice2CreatedBy, u2.name AS choice2CreatedByName, pp3.title AS choice3Title, pp3.id AS choice3CreatedBy, u3.name AS choice3CreatedByName, pp4.title AS assignedChoiceTitle, pp4.id AS assignedChoiceCreatedBy, u4.name AS assignedChoiceCreatedByName, pathways.name AS pathwayName, cohortsMemberships.* FROM cohortsMemberships LEFT JOIN cohorts ON cohortsMemberships.cohortId = cohorts.id LEFT JOIN users u0 ON cohortsMemberships.studentId = u0.id LEFT JOIN projectproposals pp1 ON cohortsMemberships.choice1 = pp1.id LEFT JOIN users u1 ON choice1createdBy = u1.id LEFT JOIN projectproposals pp2 ON cohortsMemberships.choice2 = pp2.id LEFT JOIN users u2 ON choice2createdBy = u2.id LEFT JOIN projectproposals pp3 ON cohortsMemberships.choice3 = pp3.id LEFT JOIN users u3 ON choice3createdBy = u3.id LEFT JOIN projectproposals pp4 ON cohortsMemberships.assignedChoice = pp4.id LEFT JOIN users u4 ON assignedChoiceCreatedBy = u4.id LEFT JOIN pathways ON cohortsMemberships.pathwayId = pathways.id;");
+db.exec("CREATE VIEW IF NOT EXISTS projectsStudentsFilled AS SELECT projects.projectProposalId AS projectProjectProposalId, projects.githubLink AS projectGithubLink, projects.overleafLink AS projectOverleafLink, projects.cohortId AS projectCohortId, users.name AS studentName, users.nickname AS studentNickname, users.email AS studentEmail, users.salt AS studentSalt, users.passwordHash AS studentPasswordHash, users.campusCardNumber AS studentCampusCardNumber, users.threeTwoThree AS studentThreeTwoThree, users.maxNumToSupervise AS studentMaxNumToSupervise, users.isAdmin AS studentIsAdmin, users.isStudent AS studentIsStudent, users.isSupervisor AS studentIsSupervisor, users.isHubstaff AS studentIsHubstaff, projectsStudents.* FROM projectsStudents LEFT JOIN projects ON projectsStudents.projectId = projects.id LEFT JOIN users ON projectsStudents.studentId = users.id;");
+db.exec("CREATE VIEW IF NOT EXISTS markingFilled AS SELECT submissions.deliverableId AS submissionDeliverableId, submissions.projectId AS submissionProjectId, submissions.studentId AS submissionStudentId, submissions.file AS submissionFile, submissions.createdOn AS submissionCreatedOn, marksheets.markschemeId AS marksheetMarkschemeId, users.name AS markerName, users.nickname AS markerNickname, users.email AS markerEmail, users.salt AS markerSalt, users.passwordHash AS markerPasswordHash, users.campusCardNumber AS markerCampusCardNumber, users.threeTwoThree AS markerThreeTwoThree, users.maxNumToSupervise AS markerMaxNumToSupervise, users.isAdmin AS markerIsAdmin, users.isStudent AS markerIsStudent, users.isSupervisor AS markerIsSupervisor, users.isHubstaff AS markerIsHubstaff, marking.* FROM marking LEFT JOIN submissions ON marking.submissionId = submissions.id LEFT JOIN marksheets ON marking.marksheetId = marksheets.id LEFT JOIN users ON marking.markerId = users.id;");
+
+db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
@@ -180,11 +182,6 @@ function getProjectProposalById(projectProposalId) {
 function getDeliverableById(deliverableId) {
 	let stmt = db.prepare("SELECT * FROM deliverables WHERE id = ?");
 	return stmt.get(deliverableId);
-}
-
-function getDeliverablesByPathwayId(pathwayId) {
-	let stmt = db.prepare("SELECT * FROM deliverables WHERE pathwayId = ?");
-	return stmt.all(pathwayId);
 }
 
 function getProjectProposalsByPathwayId(pathwayId) {
@@ -1128,12 +1125,54 @@ app.get("/api/tags/:tagId/delete", (req, res) => {
 
 // TODO: if we change the user in settings we need to update the session copy of user
 
+function getProjectStudentsByProjectId(projectId) {
+	let stmt = db.prepare("SELECT * FROM projectsStudentsFilled WHERE projectId = ?");
+	return stmt.all(projectId);
+}
+
+function getDeliverablesByCohortIdAndPathwayId(cohortId, pathwayId) {
+	let stmt = db.prepare("SELECT deliverables.* FROM deliverablesMemberships INNER JOIN deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE cohortId = ? AND pathwayId = ?");
+	return stmt.all(cohortId, pathwayId);
+}
+
+function getMarkingBySubmissionId(submissionId) {
+	let stmt = db.prepare("SELECT * FROM markingFilled WHERE submissionId = ?");
+	return stmt.all(submissionId);
+}
+
 app.get("/overview", (req, res) => {
+	let projects = [];
+
+	if(req.session.user.isSupervisor) {
+		projects = getProjectsBySupervisorId(req.session.user.id);
+		for(let project of projects) {
+			project.studentMemberships = getProjectStudentsByProjectId(project.id);
+			for(let projectStudentMembership of project.studentMemberships) {
+				let cohortMembership = getCohortMembershipByCohortIdAndStudentId(project.cohortId, projectStudentMembership.studentId);
+				projectStudentMembership.deliverables = getDeliverablesByCohortIdAndPathwayId(project.cohortId, cohortMembership.pathwayId);
+				for(let deliverable of projectStudentMembership.deliverables) {
+					deliverable.submissions = getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverable.id, project.id, projectStudentMembership.studentId);
+					for(let submission of deliverable.submissions) {
+						submission.marking = getMarkingBySubmissionId(submission.id);
+					}
+				}
+			}
+		}
+	}
+
+	/*
+	
+	display new submissions
+	which have not been marked by us
+
+	submissions based on project we supervise
+
+	*/
+
 	res.render("overview", {
 		cohorts: req.session.user.isStudent ? getCohortsAndCohortsMembershipByStudentId(req.session.user.id) : [],
-		projectsSupervising: req.session.user.isSupervisor ? getProjectsBySupervisorId(req.session.user.id) : []
+		projectsSupervising: projects
 	});
-	return;
 });
 
 ["github", "overleaf"].forEach(e => {
@@ -1182,6 +1221,9 @@ app.post("/api/marking", (req, res) => {
 		let marksheetPartStmt = db.prepare("INSERT INTO marksheetsParts(marksheetId, markschemePartId, mark, feedback) VALUES (?, ?, ?, ?)");
 		let result = marksheetPartStmt.run(marksheetId, parts[i].partId, parts[i].mark, parts[i].feedback);
 	}
+
+	let markingStmt = db.prepare("INSERT INTO marking(submissionId, marksheetId, markerId) VALUES (?, ?, ?)");
+	markingStmt.run(submissionId, marksheetId, req.session.user.id);
 
 	res.send(JSON.stringify({
 		marksheetId: marksheetId

@@ -2,6 +2,7 @@ doctype html
 html(lang="en")
 	head
 		include includes/head.pug
+		link(rel="stylesheet", href="/css/overview.css")
 	body 
 		include includes/header.pug
 		main
@@ -27,8 +28,28 @@ html(lang="en")
 				a(href="/projectproposals/new") Create a project proposal 
 
 				h3.m1-top Projects you are supervising
-				for project in projectsSupervising
-					a(href="/projects/" + project.id) #{project.projectProposalTitle}
+				div.recpad
+					each project in projectsSupervising
+						div
+							a(href="/projects/" + project.id) #{project.projectProposalTitle}
+							div
+								each studentMembership in project.studentMemberships
+									div
+										p #{studentMembership.studentName}
+										div
+											each deliverable in studentMembership.deliverables
+												if deliverable.submissions.length > 0
+													div
+														p #{deliverable.name}
+														div
+															each submission in deliverable.submissions
+																div
+																	a(href="/submissions/"+submission.id) #{submission.createdOn}
+																	div
+																		each marked in submission.marking
+																			div
+																				p #{j(marked)}
+
 				if projectsSupervising.length == 0
 					p None at the moment
 
