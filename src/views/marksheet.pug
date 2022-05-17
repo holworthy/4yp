@@ -1,0 +1,24 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Marksheet
+			p Markscheme - #{marksheet.markschemeName}
+			
+			table.m1-top
+				thead
+					tr
+						th Part
+						th Mark
+						th Weight
+						th Feedback
+				tbody
+					each part in marksheetParts
+						tr
+							td #{part.markschemePartName}
+							td #{part.mark}
+							td #{part.markschemePartWeight}
+							td #{part.feedback}

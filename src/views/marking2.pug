@@ -6,7 +6,6 @@ html(lang="en")
 		script(src="/js/marking.js") 
 	body(data-submission-id = submission.id)
 		include includes/header.pug
-		p #{JSON.stringify(submission)}
 		main
 			.split
 				div
@@ -14,18 +13,22 @@ html(lang="en")
 						h2 Marking
 						p #{markscheme.name}
 
-						#marksheet
-							#header
-								p Name
-								p Mark
-							#parts
+						table
+							thead
+								tr
+									th Name
+									th Mark 
+									th Feedback
+							tbody
 								each part in markschemeParts
-									.flex-equal
-										p #{part.name}
-										div
+									tr.part-row(data-part-id=part.id)
+										td #{part.name}
+										td
 											p
-												input.part-input(type="text", data-part-id=part.id)
+												input.mark-input(type="text")
 												| /#{part.weight}
+										td
+											textarea
 
 						button.m1-top#submit-marking-button Submit Marking
 
