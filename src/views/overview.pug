@@ -9,7 +9,7 @@ html(lang="en")
 			h3.m1-top Things you can do...
 			if user.isStudent
 				each cohort in cohorts
-					if !cohort.isDoneChoosing
+					if !cohort.doneChoosing
 						p.m1-top Make your project choices for this cohort:
 						a(href="/cohorts/"+cohort.id)  #{cohort.name}
 

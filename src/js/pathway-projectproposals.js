@@ -61,7 +61,8 @@ window.addEventListener("load", () => {
 				console.log("error with XHR");
 			});
 			xhr.send(JSON.stringify({
-				projectId: curr.dataset.projectId
+				projectId: curr.dataset.projectId,
+				cohortId: parseInt(location.href.split("/")[4])
 			}));
 		});
 	}
