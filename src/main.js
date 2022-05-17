@@ -609,10 +609,23 @@ app.get("/api/student-search", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
-		res.send(JSON.stringify(stmt.all(req.query.name)));
+		let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' AND isStudent = 1 AND id NOT IN (SELECT studentId FROM cohortsMemberships WHERE cohortId = ?) LIMIT 5"); // TODO: check for SQL injection
+		res.send(JSON.stringify(stmt.all(req.query.name, req.query.cohortId)));
 	}
 });
+
+app.post("/api/remove-from-cohort", (req, res) => {
+	res.setHeader("Content-type", "application/json");
+	try {
+		console.log(req.body.studentId);
+		console.log(db.prepare("DELETE FROM cohortsMemberships WHERE cohortId = ? AND studentId = ? AND projectId IS null").run(req.query.cohortId, req.body.studentId));
+		res.send(JSON.stringify(true));
+	} catch(e) {
+		console.log(e);
+		res.send(JSON.stringify(false));
+	}
+});
+
 app.get("/api/add-student-to-cohort", (req, res) => {
 	res.setHeader("Content-Type", "application/json");
 	// TODO: permission check

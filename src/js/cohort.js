@@ -1,3 +1,15 @@
+function removeStudent(removeButton){
+	let xhr = new XMLHttpRequest();
+	xhr.addEventListener("load", () => {
+		if (JSON.parse(xhr.response))
+			location.reload();
+	});
+	xhr.open("POST", "/api/remove-from-cohort?cohortId="+location.pathname.substring(9));
+	xhr.setRequestHeader("Content-Type", "application/json");
+	console.log(removeButton.dataset.studentId);
+	xhr.send(JSON.stringify({studentId: removeButton.dataset.studentId}));
+}
+
 function remove(removeButton){
 	let tds = removeButton.parentElement.parentElement.childNodes;
 	let xhr = new XMLHttpRequest();
@@ -115,6 +127,7 @@ window.addEventListener("load", () => {
 				button.innerText = "Add to cohort";
 				button.addEventListener("click", () => {
 					let xhr2 = new XMLHttpRequest();
+					xhr2.addEventListener("load", () => location.reload());
 					xhr2.open("GET", "/api/add-student-to-cohort?cohortId=" + location.pathname.substring(9) + "&studentId=" + students[i].id);
 					xhr2.send();
 				});
@@ -122,7 +135,7 @@ window.addEventListener("load", () => {
 				studentBox.append(studentDiv);
 			}
 		});
-		xhr.open("GET", "/api/student-search?name=" + encodeURIComponent(name));
+		xhr.open("GET", "/api/student-search?name=" + encodeURIComponent(name)+"&cohortId=" + encodeURIComponent(location.pathname.substring(9)));
 		xhr.send();
 	});
 

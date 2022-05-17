@@ -87,7 +87,7 @@ html(lang="en")
 									td #{student.deferring ? "Yes" : "No"}
 									td #{student.pathway}
 									td
-										button Remove
+										button(onclick="removeStudent(this)", data-student-id=student.studentId) Remove
 
 						if cohortStudents.length == 0
 							tr
