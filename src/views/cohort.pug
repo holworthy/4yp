@@ -41,6 +41,22 @@ html(lang="en")
 			if user.isAdmin
 				div
 					h2 #{cohort.name}
+					ul 
+						each pathway in pathwaysCohort 
+							li 
+								a(href="/pathways/"+pathway.id) #{pathway.name}
+								button(style="width: auto;", onclick="removePathway(this)", data-pathway-id=pathway.id) Remove Pathway
+						if pathwaysCohort.length == 0
+							li No Pathways added to cohort
+					div.m1-top
+						h3 Add Pathway
+						if pathways.length > 0
+							select(name="pathways", id="pathways")
+								each pathway in pathways
+									option(value=pathway.id) #{pathway.name}
+							button(style="width: auto;", onclick="addPathway(this)") Add Pathway
+						else 
+							a(href="/pathways/new") Create New Pathway
 					table.m1-top
 						thead
 							tr
@@ -97,36 +113,38 @@ html(lang="en")
 					div.m1-top
 						input#student-name-input(type="text", placeholder="Type a student name")
 						#student-box
-				.m2-top 
-					h2 Add Deliverables 
-					a(href="/Deliverable/new") Create New Deliverable 
-					h4 Search 
-					input#deliverable-name-input(type="text", placeholder="Type a deliverable name")
-					#deliverable-box
-					h3 current deliverables 
-					table
-						tr 
-							th Name
-							th Pathway 
-							th Weighting 
-							th Due Date 
-							th Edit/Remove
-						each deliverable in deliverables 
-							tr
-								td(data-deliverable-id=deliverable.deliverableId)
-									a(href="/deliverables/"+deliverable.deliverableId) #{deliverable.deliverableName}
-								td(data-pathway-id=deliverable.pathwayId)
-									a(href="/pathways/"+deliverable.pathwayId)  #{deliverable.pathwayName}
-								td(data-weight=deliverable.weighting) #{deliverable.weighting}
-								td(data-date=deliverable.dueDate) #{deliverable.dueDate}
-								td
-									button(onclick="edit(this)") Edit
-									button(onclick="remove(this)") Remove
-				.m2-top
-					h2 Assign Projects
-					p.red-text WARNING: THIS ACTION IS NOT REVERSIBLE!
-					a(href="/cohorts/" + cohort.id + "/assignprojects") Assign Projects
-
-				.m2-top 
-					h2 Create Projects
-					a(href="/cohorts/" + cohort.id + "/createprojects") Create Projects
+				if pathwaysCohort.length > 0
+					.m2-top 
+						h2 Add Deliverables 
+						a(href="/Deliverable/new") Create New Deliverable 
+						h4 Search 
+						input#deliverable-name-input(type="text", placeholder="Type a deliverable name")
+						#deliverable-box
+						h3 current deliverables 
+						table
+							tr 
+								th Name
+								th Pathway 
+								th Weighting 
+								th Due Date 
+								th Edit/Remove
+							each deliverable in deliverables 
+								tr
+									td(data-deliverable-id=deliverable.deliverableId)
+										a(href="/deliverables/"+deliverable.deliverableId) #{deliverable.deliverableName}
+									td(data-pathway-id=deliverable.pathwayId)
+										a(href="/pathways/"+deliverable.pathwayId)  #{deliverable.pathwayName}
+									td(data-weight=deliverable.weighting) #{deliverable.weighting}
+									td(data-date=deliverable.dueDate) #{deliverable.dueDate}
+									td
+										button(onclick="edit(this)") Edit
+										button(onclick="remove(this)") Remove
+					if assign 
+						.m2-top
+							h2 Assign Projects
+							p.red-text WARNING: THIS ACTION IS NOT REVERSIBLE!
+							a(href="/cohorts/" + cohort.id + "/assignprojects") Assign Projects
+						if create 
+							.m2-top 
+								h2 Create Projects
+								a(href="/cohorts/" + cohort.id + "/createprojects") Create Projects

@@ -30,6 +30,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTE
 
 db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()))");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+db.exec("CREATE TABLE IF NOT EXISTS cohortsPathways (cohortId INTEGER, pathwayId INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, cohortId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (cohortId) REFERENCES cohorts(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
@@ -162,6 +163,11 @@ function getPathwayById(pathwayId) {
 function getAllPathways() {
 	let stmt = db.prepare("SELECT * FROM pathways");
 	return stmt.all();
+}
+
+function getAllCohortPathways(cohortId) {
+	let stmt = db.prepare("SELECT * FROM pathways WHERE id IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
+	return stmt.all(cohortId);
 }
 
 function getProjectById(projectId) {
@@ -395,6 +401,26 @@ app.post("/cohorts/new", (req, res) => {
 
 app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
 
+app.post("/api/add-pathway-cohort", (req, res) => {
+	res.setHeader("Content-type", "application/json");
+	try {
+		db.prepare("INSERT INTO cohortsPathways(cohortId, pathwayId) VALUES (?, ?)").run(req.query.cohortId, req.body.pathwayId);
+		res.send(JSON.stringify(true));
+	} catch {
+		res.send(JSON.stringify(false));
+	}
+});
+
+app.post("/api/remove-pathway-cohort", (req, res) => {
+	res.setHeader("Content-type", "application/json");
+	try {
+		db.prepare("DELETE FROM cohortsPathways WHERE cohortId = ? AND pathwayId = ?").run(req.query.cohortId, req.body.pathwayId);
+		res.send(JSON.stringify(true));
+	} catch {
+		res.send(JSON.stringify(false));
+	}
+});
+
 // TODO: update student view of this page
 app.get("/cohorts/:cohortId", (req, res) => {
 	let cohortId = req.params.cohortId;
@@ -415,11 +441,43 @@ app.get("/cohorts/:cohortId", (req, res) => {
 				
 				let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
 				
+				let pathwaysCohort = getAllCohortPathways(req.params.cohortId);
+				let pathways = db.prepare("SELECT * FROM pathways WHERE id NOT IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)").all(req.params.cohortId);
+
+				let pathwaysCheck = pathwaysCohort.length;
+				for (let i = 0; i < pathwaysCohort.length; i++){
+					for (let j = 0; j < deliverables.length; j++){
+						if (deliverables[j].pathwayId == pathwaysCohort[i].id) {
+							pathwaysCheck -= 1;
+							break;
+						}
+					}
+				}
+				
+				if (pathwaysCheck <= 0)
+					assign = true;
+				else 
+					assign = false;
+				if (cohortStudents.length == 0)
+					assign = false;
+
+				let create = false;
+				for (let i = 0; i < cohortStudents.length; i++){
+					if (cohortStudents[i].assignedChoice != null){
+						create = true;
+						break;
+					}
+				}
+
 				res.render("cohort", {
 					cohort: cohort,
 					cohortStudents: cohortStudents,
 					deliverables: deliverables,
-					membership: membership
+					membership: membership,
+					pathways: pathways,
+					pathwaysCohort: pathwaysCohort,
+					assign: assign,
+					create: create
 				});
 			} catch(e) {
 				res.redirect("/cohorts");
@@ -533,7 +591,7 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 app.get("/cohorts/:cohortId/pathways", (req, res) => {
 	res.render("cohort-pathways", {
 		cohort: getCohortById(req.params.cohortId),
-		pathways: getAllPathways()
+		pathways: getAllCohortPathways(req.params.cohortId)
 	});
 });
 
@@ -580,8 +638,8 @@ app.get("/api/all-pathways", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT * FROM pathways"); // TODO: check for SQL injection
-		res.send(JSON.stringify(stmt.all()));
+		console.log(getAllCohortPathways(req.query.cohortId));
+		res.send(JSON.stringify(getAllCohortPathways(req.query.cohortId)));
 	}
 });
 
@@ -668,11 +726,9 @@ app.get("/api/student-search", (req, res) => {
 app.post("/api/remove-from-cohort", (req, res) => {
 	res.setHeader("Content-type", "application/json");
 	try {
-		console.log(req.body.studentId);
-		console.log(db.prepare("DELETE FROM cohortsMemberships WHERE cohortId = ? AND studentId = ? AND projectId IS null").run(req.query.cohortId, req.body.studentId));
+		db.prepare("DELETE FROM cohortsMemberships WHERE cohortId = ? AND studentId = ? AND projectId IS null").run(req.query.cohortId, req.body.studentId);
 		res.send(JSON.stringify(true));
-	} catch(e) {
-		console.log(e);
+	} catch {
 		res.send(JSON.stringify(false));
 	}
 });
@@ -822,6 +878,7 @@ app.get("/pathways/:id", (req, res) => {
 
 // TODO: this only allows choices for first cohort user is in
 // TODO: should this be deleted?
+// TODO: not all of it
 // app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
 // 	let pathwayId = req.params.pathwayId;
 // 	try{
