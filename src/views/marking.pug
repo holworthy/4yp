@@ -2,32 +2,36 @@ doctype html
 html(lang="en")
 	head
 		include includes/head.pug
-	body
+		link(rel="stylesheet", href="/css/marking.css")
+		script(src="/js/marking.js") 
+	body(data-submission-id = submission.id)
 		include includes/header.pug
-		main.fullwidth
+		main
 			.split
 				div
-					h2 Marking
-					p #{markscheme.name}
-
 					.sticky
-						table.equal
+						h2 Marking
+						p #{markscheme.name}
+
+						table
 							thead
 								tr
 									th Name
-									th Mark
+									th Mark 
+									th Feedback
 							tbody
 								each part in markschemeParts
-									tr
+									tr.part-row(data-part-id=part.id)
 										td #{part.name}
-										td.inline
-											p 
-												input(type="text", name="")
+										td
+											p
+												input.mark-input(type="text")
 												| /#{part.weight}
-								if markschemeParts.length == 0
-									tr
-										td(colspan="2") No parts in this markscheme
-						input.m1-top(type="submit", value="Submit Marking")
+										td
+											textarea
+
+						button.m1-top#submit-marking-button Submit Marking
 
 				div
-					iframe(src="/uploads/pdf.pdf", frameborder="0")
+					each submissionFile in submissionFiles
+						iframe(src=submissionFile.url, frameborder="0")

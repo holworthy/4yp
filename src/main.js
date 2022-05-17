@@ -20,7 +20,7 @@ db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,
 db.exec("CREATE TABLE IF NOT EXISTS markschemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS markschemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
-db.exec("CREATE TABLE IF NOT EXISTS marksheetParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markschemePartId INTEGER, mark REAL, UNIQUE(marksheetId, markschemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markschemePartId) REFERENCES markschemeParts(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS marksheetsParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markschemePartId INTEGER, mark REAL, feedback TEXT, UNIQUE(marksheetId, markschemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markschemePartId) REFERENCES markschemesParts(id) ON DELETE CASCADE)");
 
 db.exec("CREATE TABLE IF NOT EXISTS projectProposals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE, description TEXT, approved INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, markschemeId INTEGER DEFAULT NULL, createdBy INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE RESTRICT, FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE SET DEFAULT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsSupervisors (projectProposalId INTEGER, supervisorId INTEGER, UNIQUE (projectProposalId, supervisorId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE)");
@@ -93,7 +93,7 @@ db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Web-Based Programming', 'CMP-4011A')");
 
-db.exec("INSERT OR IGNORE INTO deliverables(name) VALUES ('Deliverable 1'), ('Deliverable 2'), ('Deliverable 3')");
+db.exec("INSERT OR IGNORE INTO deliverables(name) VALUES ('Progress and Engagement Report'), ('Poster'), ('Final Report'), ('Code')");
 db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (1, 1, 1, '2022-05-20', 50, 1)");
 db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (3, 1, 1, '2022-05-20', 50, 1)");
 
@@ -238,6 +238,21 @@ function getDeliverablesMembershipsByDeliverableId(deliverableId) {
 	return stmt.all(deliverableId);
 }
 
+function getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(deliverableId, cohortId, pathwayId) {
+	let stmt = db.prepare("SELECT * FROM deliverablesMemberships WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
+	return stmt.get(deliverableId, cohortId, pathwayId);
+}
+
+function getMarksheetById(marksheetId) {
+	let stmt = db.prepare("SELECT markschemes.name AS markschemeName, marksheets.* FROM marksheets LEFT JOIN markschemes ON marksheets.markschemeId = markschemes.id WHERE marksheets.id = ?");
+	return stmt.get(marksheetId);
+}
+
+function getMarksheetPartsByMarksheetId(marksheetId) {
+	let stmt = db.prepare("SELECT markschemesParts.name AS markschemePartName, markschemesParts.weight AS markschemePartWeight, marksheetsParts.* FROM marksheetsParts LEFT JOIN markschemesParts ON marksheetsParts.markschemePartId = markschemesParts.id WHERE marksheetId = ?");
+	return stmt.all(marksheetId);
+}
+
 // web server
 let app = express();
 let cacheAge = 604800000;
@@ -322,6 +337,7 @@ app.use((req, res, next) => {
 	if(req.session.loggedIn) {
 		// once the user is logged in we can make user available to all the views
 		res.locals.user = req.session.user;
+		res.locals.j = o => JSON.stringify(o);
 		next();
 	} else {
 		res.redirect("/");
@@ -1190,16 +1206,14 @@ app.get("/overview", (req, res) => {
 	});
 });
 
+// TODO: do something useful with this
 app.get("/marking", (req, res) => {
-	res.render("marking", {
-		markscheme: getMarkSchemeById(1),
-		markschemeParts: getMarkschemePartsByMarkshemeId(1)
-	});
+	
 });
 
 app.get("/marking/:submissionId", (req, res) => {
 	// TODO: check we can actually mark this either as a supervisor or as a moderator
-	res.render("marking2", {
+	res.render("marking", {
 		markscheme: getMarkSchemeById(1),
 		markschemeParts: getMarkschemePartsByMarkshemeId(1),
 		submission: getSubmissionById(req.params.submissionId),
@@ -1208,15 +1222,41 @@ app.get("/marking/:submissionId", (req, res) => {
 });
 
 app.post("/api/marking", (req, res) => {
+	// TODO: this can probably be simplified using one of the views
 	let submissionId = req.body.submissionId;
 	let submission = getSubmissionById(submissionId);
+	let cohortMembership = getCohortMembershipByCohortIdAndStudentId(submission.cohortId, submission.studentId);
+	let membership = getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(submission.deliverableId, submission.cohortId, cohortMembership.pathwayId);
 
-	// TODO: need to finish this
-	// console.log(submission);
-	// console.log(getMark);
+	let marksheetStmt = db.prepare("INSERT INTO marksheets(markschemeId) VALUES (?)");
+	let marksheetResult = marksheetStmt.run(membership.markschemeId);
+	// TODO: check this id isnt null
+	let marksheetId = marksheetResult.lastInsertRowid;
 
-	// console.log(req.body);
-	res.send("true");
+	let parts =  req.body.parts;
+	for(let i = 0; i < parts.length; i++) {
+		// TODO: check bounds on these
+		let marksheetPartStmt = db.prepare("INSERT INTO marksheetsParts(marksheetId, markschemePartId, mark, feedback) VALUES (?, ?, ?, ?)");
+		let result = marksheetPartStmt.run(marksheetId, parts[i].partId, parts[i].mark, parts[i].feedback);
+	}
+
+	res.send(JSON.stringify({
+		marksheetId: marksheetId
+	}));
+});
+
+// TODO: do something with this
+app.get("/marksheets", (req, res) => {
+
+});
+
+app.get("/marksheets/:marksheetId", (req, res) => {
+	let marksheetId = req.params.marksheetId;
+	let marksheet = getMarksheetById(marksheetId);
+	res.render("marksheet", {
+		marksheet: marksheet,
+		marksheetParts: getMarksheetPartsByMarksheetId(marksheetId)
+	});
 });
 
 app.get("/projects", (req, res) => {
