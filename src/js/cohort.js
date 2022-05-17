@@ -1,3 +1,25 @@
+function addPathway(addButton){
+	let xhr = new XMLHttpRequest();
+	xhr.addEventListener("load", () => {
+		if (JSON.parse(xhr.response))
+			location.reload();
+	});
+	xhr.open("POST", "/api/add-pathway-cohort?cohortId="+location.pathname.substring(9));
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.send(JSON.stringify({pathwayId: document.getElementById("pathways").value}));
+}
+
+function removePathway(removeButton){
+	let xhr = new XMLHttpRequest();
+	xhr.addEventListener("load", () => {
+		if (JSON.parse(xhr.response))
+			location.reload();
+	});
+	xhr.open("POST", "/api/remove-pathway-cohort?cohortId="+location.pathname.substring(9));
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.send(JSON.stringify({pathwayId: removeButton.dataset.pathwayId}));
+}
+
 function removeStudent(removeButton){
 	let xhr = new XMLHttpRequest();
 	xhr.addEventListener("load", () => {
@@ -6,7 +28,6 @@ function removeStudent(removeButton){
 	});
 	xhr.open("POST", "/api/remove-from-cohort?cohortId="+location.pathname.substring(9));
 	xhr.setRequestHeader("Content-Type", "application/json");
-	console.log(removeButton.dataset.studentId);
 	xhr.send(JSON.stringify({studentId: removeButton.dataset.studentId}));
 }
 
@@ -179,7 +200,7 @@ window.addEventListener("load", () => {
 							pathwaySelect.appendChild(option);
 						}
 					});
-					xhr4.open("GET", "/api/all-pathways");
+					xhr4.open("GET", "/api/all-pathways?cohortId="+location.pathname.substring(9));
 					xhr4.send();
 					form.appendChild(pathwaySelect);
 
