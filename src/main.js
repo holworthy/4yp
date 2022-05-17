@@ -1149,16 +1149,14 @@ app.get("/overview", (req, res) => {
 	});
 });
 
+// TODO: do something useful with this
 app.get("/marking", (req, res) => {
-	res.render("marking", {
-		markscheme: getMarkSchemeById(1),
-		markschemeParts: getMarkschemePartsByMarkshemeId(1)
-	});
+	
 });
 
 app.get("/marking/:submissionId", (req, res) => {
 	// TODO: check we can actually mark this either as a supervisor or as a moderator
-	res.render("marking2", {
+	res.render("marking", {
 		markscheme: getMarkSchemeById(1),
 		markschemeParts: getMarkschemePartsByMarkshemeId(1),
 		submission: getSubmissionById(req.params.submissionId),
