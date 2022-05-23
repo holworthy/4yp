@@ -1,8 +1,83 @@
-doctype html
 html(lang="en")
 	head
 		include includes/head.pug
+		script(src="/js/pathway-projectproposals.js")
+		script(src="/js/cohort-pathway.js")
 	body
 		include includes/header.pug
 		main
-			h2 #{pathway.name}
+			h2 #{cohort.name} - #{pathway.name}
+
+			if user.isAdmin
+				h3 Add deliverable to pathway
+				a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/add-deliverable") Add Deliverable 
+				//- a(href="/Deliverable/new") Create New Deliverable 
+				//- h4 Search 
+				//- input#deliverable-name-input(type="text", placeholder="Type a deliverable name")
+				//- #deliverable-box
+
+				
+
+				h3 Current deliverables on pathway
+				table
+					tr 
+						th Name
+						th Weighting 
+						th Due Date 
+						th Marksheet
+						th Edit/Remove
+					each deliverable in deliverables
+						tr
+							td(data-deliverable-id=deliverable.deliverableId)
+								a(href="/deliverables/"+deliverable.deliverableId) #{deliverable.deliverableName}
+							td(data-weight=deliverable.weighting) #{deliverable.weighting}
+							td(data-date=deliverable.dueDate) #{deliverable.dueDate}
+							td(data-marksheet-id=deliverable.marksheetId)
+								a(href="/markschemes/"+deliverable.markschemeId) #{deliverable.markschemeName}
+							td
+								button(onclick="edit(this)") Edit
+								button(onclick="remove(this)") Remove
+
+			if user.isStudent
+				if !(choices.every(choice => (choice == null)))
+					.container.white.bordered.flex-list.p1.m1-top
+						h2 Choices
+						br
+						ul.draggable-list#draggable-list 
+							each val in [0, 1, 2]
+								li(data-index = val)
+									span.number #{val + 1}
+									if choices[val] != null
+										.draggable(draggable="true")
+											p.project-detail #{choices[val].title}
+											p.project-detail 
+												if choices[val].createdBy
+													a(href="/users/" + choices[val].createdBy) #{choices[val].createdByName}
+												else
+													| Anonymous
+											button(class = "removeSelectionButton", data-project-id = choices[val], data-choice-id = val+1) Remove
+									else 
+										.draggable(draggable="true")
+											p.project-detail -
+											p.project-detail -
+											i(class="fas fa-grip-lines")
+						a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/donechoosing") Done
+				.container.white.bordered.p1.m1-top
+					table
+						thead
+							tr
+								th Title
+								th Supervised By
+								th Select
+						tbody
+							each projectProposal in projectproposals
+								tr
+									td
+										a(href="/projectproposals/" + projectProposal.id)  #{projectProposal.title}
+									td
+										if projectProposal.createdBy
+											a(href="/users/" + projectProposal.createdBy) #{projectProposal.createdByName}
+										else
+											| Anonymous
+									td
+										button(class = "projectSelectButton", data-project-id = projectProposal.id) Select
