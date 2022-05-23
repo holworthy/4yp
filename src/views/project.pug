@@ -47,6 +47,13 @@ html(lang="en")
 							input.m1-top(type="text", name="overleafLink", Placeholder=(project.overleafLink != null ? project.overleafLink : "https://www.overleaf.com/"))
 							input.login_submit.m1-top(type="submit")
 
+					if agreedMarks.length > 0
+						h2 Returned Marks
+						each agreedMark in agreedMarks
+							p Submission:
+								a(href="/submissions/" + agreedMark.submissionId) Submission
+							p #{agreedMark.mark} / #{agreedMark.total}
+
 			if user.isSupervisor
 				h3 Students
 				each student in projectStudents

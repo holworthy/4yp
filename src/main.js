@@ -31,7 +31,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTE
 db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()))");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS cohortsPathways (cohortId INTEGER, pathwayId INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
-db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, cohortId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (cohortId) REFERENCES cohorts(id))");
+db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, cohortId INTEGER, pathwayId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
@@ -48,15 +48,20 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId 
 
 // TODO: does name need to be unique?
 db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
-db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id))");
+db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), agreedMarksId INTEGER, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id), FOREIGN KEY (agreedMarksId) REFERENCES agreedMarks(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, name TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, markerId INTEGER, UNIQUE(submissionId, markerId), FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markerId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, markschemeId INTEGER, UNIQUE(deliverableId, cohortId, pathwayId), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id), FOREIGN KEY (markschemeId) REFERENCES markschemes(id))");
+
+db.exec("CREATE TABLE IF NOT EXISTS agreedMarks (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, mark REAL, total INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id))");
+db.exec("CREATE TABLE IF NOT EXISTS agreedMarksMemberships (agreedMarkId INTEGER, markingId INTEGER, FOREIGN KEY (agreedMarkId) REFERENCES agreedMarks(id), FOREIGN KEY (markingId) REFERENCES marking(id))");
 
 db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
 db.exec("CREATE VIEW IF NOT EXISTS cohortsMembershipsFilled AS SELECT cohorts.name AS cohortName, cohorts.archived AS cohortArchived, u0.name AS studentName, pp1.title AS choice1Title, pp1.id AS choice1CreatedBy, u1.name AS choice1CreatedByName, pp2.title AS choice2Title, pp2.id AS choice2CreatedBy, u2.name AS choice2CreatedByName, pp3.title AS choice3Title, pp3.id AS choice3CreatedBy, u3.name AS choice3CreatedByName, pp4.title AS assignedChoiceTitle, pp4.id AS assignedChoiceCreatedBy, u4.name AS assignedChoiceCreatedByName, pathways.name AS pathwayName, cohortsMemberships.* FROM cohortsMemberships LEFT JOIN cohorts ON cohortsMemberships.cohortId = cohorts.id LEFT JOIN users u0 ON cohortsMemberships.studentId = u0.id LEFT JOIN projectproposals pp1 ON cohortsMemberships.choice1 = pp1.id LEFT JOIN users u1 ON choice1createdBy = u1.id LEFT JOIN projectproposals pp2 ON cohortsMemberships.choice2 = pp2.id LEFT JOIN users u2 ON choice2createdBy = u2.id LEFT JOIN projectproposals pp3 ON cohortsMemberships.choice3 = pp3.id LEFT JOIN users u3 ON choice3createdBy = u3.id LEFT JOIN projectproposals pp4 ON cohortsMemberships.assignedChoice = pp4.id LEFT JOIN users u4 ON assignedChoiceCreatedBy = u4.id LEFT JOIN pathways ON cohortsMemberships.pathwayId = pathways.id;");
 db.exec("CREATE VIEW IF NOT EXISTS projectsStudentsFilled AS SELECT projects.projectProposalId AS projectProjectProposalId, projects.githubLink AS projectGithubLink, projects.overleafLink AS projectOverleafLink, projects.cohortId AS projectCohortId, users.name AS studentName, users.nickname AS studentNickname, users.email AS studentEmail, users.salt AS studentSalt, users.passwordHash AS studentPasswordHash, users.campusCardNumber AS studentCampusCardNumber, users.threeTwoThree AS studentThreeTwoThree, users.maxNumToSupervise AS studentMaxNumToSupervise, users.isAdmin AS studentIsAdmin, users.isStudent AS studentIsStudent, users.isSupervisor AS studentIsSupervisor, users.isHubstaff AS studentIsHubstaff, projectsStudents.* FROM projectsStudents LEFT JOIN projects ON projectsStudents.projectId = projects.id LEFT JOIN users ON projectsStudents.studentId = users.id;");
 db.exec("CREATE VIEW IF NOT EXISTS markingFilled AS SELECT submissions.deliverableId AS submissionDeliverableId, submissions.projectId AS submissionProjectId, submissions.studentId AS submissionStudentId, submissions.file AS submissionFile, submissions.createdOn AS submissionCreatedOn, marksheets.markschemeId AS marksheetMarkschemeId, users.name AS markerName, users.nickname AS markerNickname, users.email AS markerEmail, users.salt AS markerSalt, users.passwordHash AS markerPasswordHash, users.campusCardNumber AS markerCampusCardNumber, users.threeTwoThree AS markerThreeTwoThree, users.maxNumToSupervise AS markerMaxNumToSupervise, users.isAdmin AS markerIsAdmin, users.isStudent AS markerIsStudent, users.isSupervisor AS markerIsSupervisor, users.isHubstaff AS markerIsHubstaff, marking.* FROM marking LEFT JOIN submissions ON marking.submissionId = submissions.id LEFT JOIN marksheets ON marking.marksheetId = marksheets.id LEFT JOIN users ON marking.markerId = users.id;");
+db.exec("CREATE VIEW IF NOT EXISTS marksheetsFilled AS SELECT markschemes.name AS markschemeName, SUM(mark) AS totalMark, SUM(weight) AS totalWeight, marksheets.* FROM marksheets LEFT JOIN markschemes ON marksheets.markschemeId = markschemes.id LEFT JOIN marksheetsParts ON marksheets.id = marksheetsParts.marksheetId LEFT JOIN markschemesParts ON markschemesParts.id = marksheetsParts.markschemePartId GROUP BY marksheets.id");
+db.exec("CREATE VIEW IF NOT EXISTS markschemesFilled AS SELECT markschemes.*, SUM(weight) AS totalWeight FROM markschemes LEFT JOIN markschemesParts ON markschemesParts.markschemeId = markschemes.id GROUP BY markschemes.id");
 
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
 
@@ -67,6 +72,7 @@ db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Simon Supervisor', 'Simon', 'simon@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Sarah Supervisor', 'Sarah', 'sarah@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
@@ -111,7 +117,7 @@ function getAllUsers() {
 }
 
 function getMarkSchemeById(markschemeId) {
-	let stmt1 = db.prepare("SELECT * FROM markschemes WHERE id = ?");
+	let stmt1 = db.prepare("SELECT * FROM markschemesFilled WHERE id = ?");
 	let markscheme = stmt1.get(markschemeId);
 
 	let stmt2 = db.prepare("SELECT * FROM markschemesParts WHERE markschemeId = ?");
@@ -241,7 +247,7 @@ function getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(deliver
 }
 
 function getMarksheetById(marksheetId) {
-	let stmt = db.prepare("SELECT markschemes.name AS markschemeName, marksheets.* FROM marksheets LEFT JOIN markschemes ON marksheets.markschemeId = markschemes.id WHERE marksheets.id = ?");
+	let stmt = db.prepare("SELECT * FROM marksheetsFilled WHERE id = ?");
 	return stmt.get(marksheetId);
 }
 
@@ -329,12 +335,13 @@ app.post("/login", (req, res) => {
 	}
 });
 
+app.use("/api/*", (req, res, next) => req.session.loggedIn ? next() : res.json(false));
+
 // users must be logged in to view any page defined below this
 app.use((req, res, next) => {
 	if(req.session.loggedIn) {
 		// once the user is logged in we can make user available to all the views
 		res.locals.user = req.session.user;
-		res.locals.j = o => JSON.stringify(o);
 		next();
 	} else {
 		res.redirect("/");
@@ -402,22 +409,20 @@ app.post("/cohorts/new", (req, res) => {
 app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
 
 app.post("/api/add-pathway-cohort", (req, res) => {
-	res.setHeader("Content-type", "application/json");
 	try {
 		db.prepare("INSERT INTO cohortsPathways(cohortId, pathwayId) VALUES (?, ?)").run(req.query.cohortId, req.body.pathwayId);
-		res.send(JSON.stringify(true));
+		res.json(true);
 	} catch {
-		res.send(JSON.stringify(false));
+		res.json(false);
 	}
 });
 
 app.post("/api/remove-pathway-cohort", (req, res) => {
-	res.setHeader("Content-type", "application/json");
 	try {
 		db.prepare("DELETE FROM cohortsPathways WHERE cohortId = ? AND pathwayId = ?").run(req.query.cohortId, req.body.pathwayId);
-		res.send(JSON.stringify(true));
+		res.json(true);
 	} catch {
-		res.send(JSON.stringify(false));
+		res.json(false);
 	}
 });
 
@@ -678,26 +683,24 @@ app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 app.get("/cohorts/:cohortId/pathways/:pathwayId/donechoosing", (req, res) => {
 	let stmt = db.prepare("UPDATE cohortsMemberships SET doneChoosing = 1, pathwayId = ? WHERE cohortId = ? AND studentId = ?");
 	stmt.run(req.params.pathwayId, req.params.cohortId, req.session.user.id);
-	res.redirect("/cohorts/" + req.params.cohortId + "/pathways/" + req.params.pathwayId);
+	res.redirect("/cohorts/" + req.params.cohortId);
 });
 
 app.get("/api/all-pathways", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
 		console.log(getAllCohortPathways(req.query.cohortId));
-		res.send(JSON.stringify(getAllCohortPathways(req.query.cohortId)));
+		res.json(getAllCohortPathways(req.query.cohortId));
 	}
 });
 
 app.get("/api/all-markschemes", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
 		let stmt = db.prepare("SELECT * FROM markschemes"); // TODO: check for SQL injection
-		res.send(JSON.stringify(stmt.all()));
+		res.json(stmt.all());
 	}
 });
 
@@ -706,8 +709,7 @@ app.post("/api/remove-deliverable-in-cohort", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		db.prepare("DELETE FROM deliverablesMemberships WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?").run(req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
-		res.setHeader("Content-Type", "application/json");
-		res.send(JSON.stringify(true));
+		res.json(true);
 	}
 });
 
@@ -718,8 +720,7 @@ app.post("/api/change-deliverable-in-cohort", (req, res) => {
 		// TODO: check date formats are good
 		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ?, markschemeId = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
 		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.markscheme, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
-		res.setHeader("Content-Type", "application/json");
-		res.send(JSON.stringify(true));
+		res.json(true);
 	}
 });
 
@@ -735,21 +736,20 @@ app.post("/api/add-deliverable-to-cohort", (req, res) => {
 });
 
 app.get("/api/deliverable-search", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
 		let stmt = db.prepare("SELECT * FROM deliverables WHERE deliverables.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
-		res.send(JSON.stringify(stmt.all(req.query.name)));
+		res.json(stmt.all(req.query.name));
 	}
 });
 
 app.get("/cohorts/:cohortId/createprojects", (req, res) => {
 		// TODO: fix this code that jack clearly wrote while he was asleep
 		let cohortId = req.params.cohortId;
-		let memberships = db.prepare("SELECT studentId, assignedChoice FROM cohortsMemberships WHERE cohortId = ? AND assignedChoice IS NOT NULL").all(cohortId);
+		let memberships = db.prepare("SELECT studentId, assignedChoice, pathwayId FROM cohortsMemberships WHERE cohortId = ? AND assignedChoice IS NOT NULL").all(cohortId);
 		for (let i = 0; i < memberships.length; i++) {
-			let projId = db.prepare("INSERT INTO projects(projectProposalId, cohortId) VALUES (?, ?)").run(memberships[i].assignedChoice, cohortId).lastInsertRowid;
+			let projId = db.prepare("INSERT INTO projects(projectProposalId, cohortId, pathwayId) VALUES (?, ?, ?)").run(memberships[i].assignedChoice, cohortId, memberships[i].pathwayId).lastInsertRowid;
 			db.prepare("INSERT INTO projectsStudents(projectId, studentId) VALUES (?, ?)").run(projId, memberships[i].studentId);
 			let supervisorId = db.prepare("SELECT supervisorId FROM projectProposalsSupervisors WHERE projectProposalId = ?").all(memberships[i].assignedChoice);
 			for (let j =0; j < supervisorId.length; j++){
@@ -762,27 +762,24 @@ app.get("/cohorts/:cohortId/createprojects", (req, res) => {
 });
 
 app.get("/api/student-search", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
 		let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' AND isStudent = 1 AND id NOT IN (SELECT studentId FROM cohortsMemberships WHERE cohortId = ?) LIMIT 5"); // TODO: check for SQL injection
-		res.send(JSON.stringify(stmt.all(req.query.name, req.query.cohortId)));
+		res.json(stmt.all(req.query.name, req.query.cohortId));
 	}
 });
 
 app.post("/api/remove-from-cohort", (req, res) => {
-	res.setHeader("Content-type", "application/json");
 	try {
 		db.prepare("DELETE FROM cohortsMemberships WHERE cohortId = ? AND studentId = ? AND projectId IS null").run(req.query.cohortId, req.body.studentId);
-		res.send(JSON.stringify(true));
+		res.json(true);
 	} catch {
-		res.send(JSON.stringify(false));
+		res.json(false);
 	}
 });
 
 app.get("/api/add-student-to-cohort", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	// TODO: permission check
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
@@ -818,7 +815,6 @@ app.post("/projectproposal/new", (req, res) => {
 });
 
 app.post("/api/tag-search", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	// TODO: permission check here too
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
@@ -829,7 +825,7 @@ app.post("/api/tag-search", (req, res) => {
 			strStmt += " AND NOT id = "+tagIds[i];
 		strStmt += " LIMIT 5";
 		let stmt = db.prepare(strStmt);
-		res.send(JSON.stringify(stmt.all(req.query.name)));
+		res.json(stmt.all(req.query.name));
 	}
 });
 
@@ -978,20 +974,21 @@ app.get("/pathways/:id", (req, res) => {
 app.post("/api/projectSelection/new", (req, res) => {
 	let projectId = req.body.projectId;
 	let cohortId = req.body.cohortId;
+	let pathwayId = req.body.pathwayId;
 	let studentId = req.session.user.id;
 
 	let membership = getCohortMembershipByCohortIdAndStudentId(cohortId, studentId);
 	if(membership.choice1 == null) {
-		let choice1Stmt = db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ? AND cohortId = ?");
-		choice1Stmt.run(projectId, membership.studentId, cohortId);
+		let choice1Stmt = db.prepare("UPDATE cohortsMemberships SET choice1 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
+		choice1Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
 		res.sendStatus(200);
 	} else if(membership.choice2 == null) {
-		let choice2Stmt = db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ? AND cohortId = ?");
-		choice2Stmt.run(projectId, membership.studentId, cohortId);
+		let choice2Stmt = db.prepare("UPDATE cohortsMemberships SET choice2 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
+		choice2Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
 		res.sendStatus(200);
 	} else if(membership.choice3 == null) {
-		let choice3Stmt = db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ? AND cohortId = ?");
-		choice3Stmt.run(projectId, membership.studentId, cohortId);
+		let choice3Stmt = db.prepare("UPDATE cohortsMemberships SET choice3 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
+		choice3Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
 		res.sendStatus(200);
 	}
 });
@@ -1111,7 +1108,7 @@ app.post("/api/projectproposals/upload", (req, res) => {
 		}
 	}
 
-	res.send(JSON.stringify(projectProposal.id));
+	res.json(projectProposal.id);
 });
 
 app.get("/projectproposals/:id", (req, res) => {
@@ -1141,7 +1138,6 @@ app.get("/projectproposals/:id", (req, res) => {
 });
 
 app.get("/api/projectproposals/:projectProposalId/approve", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	try {
 		let stmt = db.prepare("UPDATE projectProposals SET approved = 1 WHERE id = ?");
 		stmt.run(req.params.projectProposalId);
@@ -1171,10 +1167,9 @@ app.post("/api/markschemes/new", (req, res) => {
 		// TODO: check if this fails
 	}
 
-	res.setHeader("Content-Type", "application/json");
-	res.send(JSON.stringify({
+	res.json({
 		markschemeId: markschemeId
-	}));
+	});
 });
 
 app.get("/markschemes/:id", (req, res) => res.render("markscheme", {
@@ -1217,7 +1212,6 @@ app.get("/tags", (req, res) => {
 });
 
 app.get("/api/tags/:tagId/delete", (req, res) => {
-	res.setHeader("Content-Type", "application/json");
 	try {
 		let stmt = db.prepare("DELETE FROM tags WHERE id = ?");
 		stmt.run(req.params.tagId);
@@ -1300,10 +1294,17 @@ app.get("/marking", (req, res) => {
 
 app.get("/marking/:submissionId", (req, res) => {
 	// TODO: check we can actually mark this either as a supervisor or as a moderator
+
+	let submission = getSubmissionById(req.params.submissionId);
+	let project = getProjectById(submission.projectId);
+	let cohortMembership = getCohortMembershipByCohortIdAndStudentId(project.cohortId, submission.studentId);
+	let deliverableMembership = getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(submission.deliverableId, submission.cohortId, cohortMembership.pathwayId);
+	let markscheme = getMarkSchemeById(deliverableMembership.markschemeId);
+
 	res.render("marking", {
-		markscheme: getMarkSchemeById(1),
-		markschemeParts: getMarkschemePartsByMarkshemeId(1),
-		submission: getSubmissionById(req.params.submissionId),
+		markscheme: markscheme,
+		markschemeParts: getMarkschemePartsByMarkshemeId(markscheme.id),
+		submission: submission,
 		submissionFiles: getSubmissionFilesBySubmissionId(req.params.submissionId)
 	});
 });
@@ -1330,9 +1331,9 @@ app.post("/api/marking", (req, res) => {
 	let markingStmt = db.prepare("INSERT INTO marking(submissionId, marksheetId, markerId) VALUES (?, ?, ?)");
 	markingStmt.run(submissionId, marksheetId, req.session.user.id);
 
-	res.send(JSON.stringify({
+	res.json({
 		marksheetId: marksheetId
-	}));
+	});
 });
 
 // TODO: do something with this
@@ -1360,6 +1361,11 @@ app.get("/projects", (req, res) => {
 	res.render("projects", {projects: getAllProjects()});
 });
 
+function getAgreedMarksByStudentId(studentId) {
+	let stmt = db.prepare("SELECT agreedMarks.id, agreedMarks.mark, agreedMarks.total, submissions.id AS submissionId FROM submissions INNER JOIN agreedMarks ON submissions.agreedMarksId = agreedMarks.id WHERE studentId = ?");
+	return stmt.all(studentId);
+}
+
 // TODO: for the love of all things good this needs a refactor
 app.get("/projects/:projectId", (req, res) => {
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
@@ -1373,13 +1379,15 @@ app.get("/projects/:projectId", (req, res) => {
 	for(let i = 0; i < deliverables.length; i++)
 		deliverables[i].submissions = getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverables[i].id, req.params.projectId, req.session.user.id);
 
+	// TODO: agreedmarks add deliverable name
 	res.render("project", {
 		project: project,
 		projectStudents: projectStudentsStmt.all(req.params.projectId),
 		projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
 		deliverables: deliverables,
 		submissions: getSubmissionsByProjectIdAndStudentId(project.id, req.session.user.id),
-		allProjectSubmissions: getSubmissionsByProjectId(req.params.projectId)
+		allProjectSubmissions: getSubmissionsByProjectId(req.params.projectId),
+		agreedMarks: getAgreedMarksByStudentId(req.session.user.id)
 	});
 });
 
@@ -1403,7 +1411,6 @@ app.post("/api/save-pathway-moderation", (req, res) => {
 		}
 	}
 
-	res.setHeader("Content-Type", "application/json");
 	res.send("true");
 });
 
@@ -1461,6 +1468,52 @@ app.get("/deliverables/:deliverableId", (req, res) => {
 		deliverable: getDeliverableById(deliverableId),
 		deliverablesMemberships: getDeliverablesMembershipsByDeliverableId(deliverableId)
 	});
+});
+
+function getMarkschemeBySubmissionId(submissionId) {
+	let submission = getSubmissionById(submissionId);
+	let project = getProjectById(submission.projectId);
+	let deliverableMembership = getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(submission.deliverableId, project.cohortId, project.pathwayId);
+	return getMarkSchemeById(deliverableMembership.markschemeId);
+}
+
+app.get("/agreedmarks/:submissionId", (req, res) => {
+	if(!req.session.user.isAdmin) {
+		res.redirect("/");
+	} else {
+		let submission = getSubmissionById(req.params.submissionId);
+		let project = getProjectById(submission.projectId);
+		let deliverableMembership = getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(submission.deliverableId, project.cohortId, project.pathwayId);
+		let markscheme = getMarkSchemeById(deliverableMembership.markschemeId);
+
+		if(!submission) {
+			res.redirect("/");
+		} else {
+			let markings = getMarkingBySubmissionId(req.params.submissionId);
+			for(let marking of markings) {
+				marking.marksheet = getMarksheetById(marking.marksheetId);
+				marking.marksheet.parts = getMarksheetPartsByMarksheetId(marking.marksheetId);
+			}
+			res.render("agreedmarks", {
+				submission: submission,
+				markings: markings,
+				markscheme: markscheme
+			});
+		}
+	}
+});
+
+// TODO: check mark is actually okay
+// TODO: check user is admin
+app.post("/api/set-agreed-mark", (req, res) => {
+	let submissionId = req.body.submissionId;
+	let mark = req.body.mark;
+	let markscheme = getMarkschemeBySubmissionId(submissionId);
+	let agreedMarkStmt = db.prepare("INSERT INTO agreedMarks(mark, total) VALUES (?, ?)")
+	let agreedMarkResult = agreedMarkStmt.run(mark, markscheme.totalWeight);
+	let submissionStmt = db.prepare("UPDATE submissions SET agreedMarksId = ? WHERE id = ?");
+	submissionStmt.run(agreedMarkResult.lastInsertRowid, submissionId);
+	res.json(true);
 });
 
 app.listen(8080);
