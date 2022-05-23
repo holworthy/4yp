@@ -65,7 +65,7 @@ function edit(editButton){
 			pathwaySelect.appendChild(option);
 		}
 	});
-	xhr.open("GET", "/api/all-pathways");
+	xhr.open("GET", "/api/all-pathways?cohortId="+location.pathname.substring(9));
 	xhr.send();
 	tds[1].appendChild(pathwaySelect);
 
@@ -76,7 +76,7 @@ function edit(editButton){
 	weightingInput.setAttribute("value", tds[2].dataset.weight);
 	tds[2].appendChild(weightingInput);
 
-	tds[3].innerHTML = "";
+	tds[4].innerHTML = "";
 	let markschemeSelect = document.createElement("select");
 	markschemeSelect.setAttribute("name", "markscheme");
 	markschemeSelect.setAttribute("id", "markscheme");
@@ -93,22 +93,29 @@ function edit(editButton){
 	});
 	xhr2.open("GET", "/api/all-markschemes");
 	xhr2.send();
-	tds[3].appendChild(markschemeSelect);
+	tds[4].appendChild(markschemeSelect);
 
-	tds[4].innerHTML = "";
+	tds[3].innerHTML = "";
 	let dateInput = document.createElement("input");
 	dateInput.setAttribute("type", "date");
 	dateInput.setAttribute("name", "dueDate");
 	dateInput.setAttribute("value", tds[4].dataset.date);
-	tds[4].appendChild(dateInput);
+	tds[3].appendChild(dateInput);
 
 	tds[5].removeChild(editButton);
 	let submit = document.createElement("button");
 	submit.addEventListener("click", () => {
 		let xhr2 = new XMLHttpRequest();
 		xhr2.addEventListener("load", () => {
-			if (JSON.parse(xhr.response)) 
+			console.log(xhr2.response);
+			if (JSON.parse(xhr2.response) === true) 
 				location.reload();
+			else if (JSON.parse(xhr2.response) === "past"){
+				let p = document.createElement("p");
+				p.appendChild(document.createTextNode("This date is in the past!"));
+				p.classList.add("red-text");
+				submit.parentElement.appendChild(p);
+			}
 		});
 		xhr2.open("POST", "/api/change-deliverable-in-cohort?cohortId="+location.pathname.substring(9));
 		xhr2.setRequestHeader("Content-Type", "application/json");

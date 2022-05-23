@@ -36,8 +36,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, student
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 
-// TODO: pathway should not be default
-db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER DEFAULT 1, UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
+db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER , UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
 
 db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, code TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS prerequisites (projectProposalId INTEGER, moduleId INTEGER, UNIQUE(projectProposalId, moduleId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (moduleId) REFERENCES modules(id) ON DELETE CASCADE)");
@@ -46,8 +45,7 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS pathwaysModerators (pathwayId INTEGER, moderatorId INTEGER, UNIQUE(pathwayId, moderatorId), FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
-// TODO: does name need to be unique?
-db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
+db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), agreedMarksId INTEGER, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id), FOREIGN KEY (agreedMarksId) REFERENCES agreedMarks(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, name TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, markerId INTEGER, UNIQUE(submissionId, markerId), FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markerId) REFERENCES users(id))");
@@ -402,7 +400,7 @@ app.post("/cohorts/new", (req, res) => {
 			res.redirect("/cohorts/new"); // TODO: add error message
 		}
 	} else {
-		res.redirect("/cohorts/new"); // TODO: add error message
+		res.redirect("/cohorts/new");
 	}
 });
 
@@ -472,7 +470,6 @@ app.post("/api/assign-project-student", (req, res) => {
 	}
 });
 
-// TODO: update student view of this page
 app.get("/cohorts/:cohortId", (req, res) => {
 	let cohortId = req.params.cohortId;
 
@@ -621,9 +618,7 @@ app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
 	if(result) {
 		for(let j = 0; j < cohortStudents.length; j++) {
 			let stmt = db.prepare("UPDATE cohortsMemberships SET assignedChoice = ? WHERE cohortId = ? AND studentId = ?");
-			stmt.run(cohortStudents[j].assignedChoice, cohortStudents[j].cohortId, cohortStudents[j].studentId);
-
-			// TODO: verify that this ran successfully
+			let success = stmt.run(cohortStudents[j].assignedChoice, cohortStudents[j].cohortId, cohortStudents[j].studentId);
 		}
 		res.redirect("/cohorts/" + req.params.cohortId);
 	} else {
@@ -647,13 +642,7 @@ app.get("/cohorts/:cohortId/pathways", (req, res) => {
 	});
 });
 
-// TODO: move /pathways/:pathwayId here
 app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
-	// res.render("cohort-pathway", {
-	// 	cohort: getCohortById(req.params.cohortId),
-	// 	pathway: getPathwayById(req.params.pathwayId)
-	// });
-
 	let cohortId = req.params.cohortId;
 	let pathwayId = req.params.pathwayId;
 
@@ -689,6 +678,7 @@ app.get("/api/all-pathways", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
+		console.log(req.query.cohortId);
 		res.json(getAllCohortPathways(req.query.cohortId));
 	}
 });
@@ -697,7 +687,7 @@ app.get("/api/all-markschemes", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT * FROM markschemes"); // TODO: check for SQL injection
+		let stmt = db.prepare("SELECT * FROM markschemes");
 		res.json(stmt.all());
 	}
 });
@@ -715,10 +705,13 @@ app.post("/api/change-deliverable-in-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		// TODO: check date formats are good
-		let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ?, markschemeId = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
-		stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.markscheme, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
-		res.json(true);
+		if (Date.parse(req.body.dueDate) > new Date()){
+			let stmt = db.prepare("UPDATE deliverablesMemberships SET pathwayId = ?, dueDate = ?, weighting = ?, markschemeId = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
+			stmt.run(req.body.newPathway, req.body.dueDate, req.body.weight, req.body.markscheme, req.body.deliverableId, req.query.cohortId, req.body.pathwayId);
+			res.json(true);
+		} else {
+			res.json("past");
+		}	
 	}
 });
 
@@ -726,10 +719,14 @@ app.post("/api/add-deliverable-to-cohort", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		// TODO: check date formats are good
-		let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting) VALUES (?, ?, ?, ?, ?)");
-		stmt.run(req.body.id, req.query.cohortId, req.body.pathway, req.body.dueDate, req.body.weight);
-		res.redirect("/cohorts/"+req.query.cohortId);
+		if (Date.parse(req.body.dueDate) > new Date()){
+			let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting) VALUES (?, ?, ?, ?, ?)");
+			stmt.run(req.body.id, req.query.cohortId, req.body.pathway, req.body.dueDate, req.body.weight);
+			res.redirect("/cohorts/"+req.query.cohortId);
+		} else {
+			// TODO: handle this
+		}
+		
 	}
 });
 
