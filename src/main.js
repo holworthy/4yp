@@ -491,7 +491,7 @@ app.get("/cohorts/:cohortId", (req, res) => {
 				let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
 				console.log(cohortStudents[0]);
 				
-				let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
+				let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName, markschemes.name AS markschemeName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id LEFT JOIN markschemes ON deliverablesMemberships.markschemeId = markschemes.id  WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
 				
 				let pathwaysCohort = getAllCohortPathways(req.params.cohortId);
 				let pathways = db.prepare("SELECT * FROM pathways WHERE id NOT IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)").all(req.params.cohortId);
