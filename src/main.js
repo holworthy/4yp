@@ -678,7 +678,6 @@ app.get("/api/all-pathways", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		console.log(req.query.cohortId);
 		res.json(getAllCohortPathways(req.query.cohortId));
 	}
 });

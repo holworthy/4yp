@@ -83,7 +83,6 @@ function edit(editButton){
 	let xhr2 = new XMLHttpRequest();
 	xhr2.addEventListener("load", () => {
 		let markschemes = JSON.parse(xhr2.response);
-		console.log(markschemes);
 		for (let j = 0; j < markschemes.length; j++){
 			let option = document.createElement("option");
 			option.setAttribute("value", markschemes[j].id);
@@ -107,7 +106,6 @@ function edit(editButton){
 	submit.addEventListener("click", () => {
 		let xhr2 = new XMLHttpRequest();
 		xhr2.addEventListener("load", () => {
-			console.log(xhr2.response);
 			if (JSON.parse(xhr2.response) === true) 
 				location.reload();
 			else if (JSON.parse(xhr2.response) === "past"){
@@ -119,7 +117,6 @@ function edit(editButton){
 		});
 		xhr2.open("POST", "/api/change-deliverable-in-cohort?cohortId="+location.pathname.substring(9));
 		xhr2.setRequestHeader("Content-Type", "application/json");
-		console.log(tds[0].dataset.deliverableId+" "+tds[1].dataset.pathwayId);
 
 		xhr2.send(JSON.stringify({
 			newPathway: pathwaySelect.value,
@@ -217,7 +214,6 @@ window.addEventListener("load", () => {
 					let xhr3 = new XMLHttpRequest();
 					xhr3.addEventListener("load", () => {
 						let markschemes = JSON.parse(xhr3.response);
-						console.log(markschemes);
 						for (let j = 0; j < markschemes.length; j++){
 							let option = document.createElement("option");
 							option.setAttribute("value", markschemes[j].id);
