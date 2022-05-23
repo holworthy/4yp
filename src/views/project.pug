@@ -18,12 +18,13 @@ html(lang="en")
 					p#next-deliverable #{deliverables[0].name} - #{deliverables[0].dueDate}
 
 					h2 Deliverables
-					each deliverable in deliverables
-						.project-deliverable
-							a(href="/deliverables/"+deliverable.id) #{deliverable.name} - #{deliverable.dueDate} - #{deliverable.weighting}
-							a(href="/projects/"+project.id+"/makesubmission/"+deliverable.id) Create submission
-					if deliverables.length == 0
-						p No deliverables set yet
+					#deliverables
+						each deliverable in deliverables
+							.project-deliverable
+								a(href="/deliverables/"+deliverable.id) #{deliverable.name} - #{deliverable.dueDate} - #{deliverable.weighting}
+								a.button(href="/projects/"+project.id+"/makesubmission/"+deliverable.id) Create submission
+						if deliverables.length == 0
+							p No deliverables set yet
 
 					h2 Submissions
 					each deliverable in deliverables

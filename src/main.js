@@ -1535,4 +1535,7 @@ app.post("/api/set-agreed-mark", (req, res) => {
 	res.json(true);
 });
 
+// TODO: who has and who hasnt uploaded a submission for a deliverable
+// SELECT * FROM cohortsMemberships LEFT JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId LEFT JOIN submissions ON deliverablesMemberships.deliverableId = submissions.deliverableId AND cohortsMemberships.studentId = submissions.studentId
+
 app.listen(8080);

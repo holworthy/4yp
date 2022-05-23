@@ -15,8 +15,10 @@ h2:first-child, h3:first-child {
 	font-size: 4rem;
 }
 
-.project-deliverable {
+#deliverables .project-deliverable {
 	margin-bottom: 1rem;
+	padding: 1rem;
+	border: 1px solid #ccc;
 }
 
 .actions {
@@ -27,4 +29,12 @@ h2:first-child, h3:first-child {
 
 .actions button {
 	flex: 1;
+}
+
+.button {
+	padding: 0.5rem;
+	text-decoration: none;
+	background-color: #eee;
+	border: 1px solid #ccc;
+	border-radius: 0.25rem;
 }
