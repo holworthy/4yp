@@ -1,0 +1,28 @@
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/admin-pathway-projectproposals.js")
+	body
+		include includes/header.pug
+		main
+			h2 #{pathway.name}
+		.container.white.bordered.p1.m1-top
+			h2 Select Project for #{student.name}
+			table
+				thead
+					tr
+						th Title
+						th Supervised By
+						th Select
+				tbody
+					each projectProposal in projectProposals
+						tr
+							td
+								a(href="/projectproposals/" + projectProposal.id)  #{projectProposal.title}
+							td
+								if projectProposal.createdBy
+									a(href="/users/" + projectProposal.createdBy) #{projectProposal.createdByName}
+								else
+									| Anonymous
+							td
+								button(class = "projectSelectButton", data-project-id = projectProposal.id) Select

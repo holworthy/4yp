@@ -101,7 +101,7 @@ html(lang="en")
 										else
 											| Not yet created
 									td #{student.deferring ? "Yes" : "No"}
-									td #{student.pathway}
+									td #{student.pathwayName}
 									td
 										button(onclick="removeStudent(this)", data-student-id=student.studentId) Remove
 
@@ -127,6 +127,7 @@ html(lang="en")
 								th Pathway 
 								th Weighting 
 								th Due Date 
+								th Marksheet
 								th Edit/Remove
 							each deliverable in deliverables 
 								tr
@@ -136,6 +137,8 @@ html(lang="en")
 										a(href="/pathways/"+deliverable.pathwayId)  #{deliverable.pathwayName}
 									td(data-weight=deliverable.weighting) #{deliverable.weighting}
 									td(data-date=deliverable.dueDate) #{deliverable.dueDate}
+									td(data-marksheet-id=deliverable.marksheetId)
+										a(href="/markschemes/"+deliverable.markschemeId) #{deliverable.markschemeName}
 									td
 										button(onclick="edit(this)") Edit
 										button(onclick="remove(this)") Remove

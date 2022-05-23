@@ -200,7 +200,7 @@ window.addEventListener("load", () => {
 							pathwaySelect.appendChild(option);
 						}
 					});
-					xhr4.open("GET", "/api/all-pathways?cohortId="+location.pathname.substring(9));
+					xhr4.open("GET", "/api/all-pathways?cohortId="+location.pathname.substring(9)); 
 					xhr4.send();
 					form.appendChild(pathwaySelect);
 
