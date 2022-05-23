@@ -62,7 +62,8 @@ window.addEventListener("load", () => {
 			});
 			xhr.send(JSON.stringify({
 				projectId: curr.dataset.projectId,
-				cohortId: parseInt(location.href.split("/")[4])
+				cohortId: parseInt(location.href.split("/")[4]),
+				pathwayId: parseInt(location.href.split("/")[6])
 			}));
 		});
 	}

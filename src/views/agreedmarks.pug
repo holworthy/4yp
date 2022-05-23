@@ -1,0 +1,30 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		link(rel="stylesheet", href="/css/agreedmarks.css")
+		script(src="/js/agreedmarks.js") 
+	body
+		include includes/header.pug
+		main
+			h2 Agreed Marks
+
+			p Submission: #{submission.deliverableName}
+			p Submitted by: #{submission.studentName}
+			
+			p Part of project: #{submission.projectProposalTitle}
+			p Part of cohort: #{submission.cohortName}
+
+			h3.m1-top Markings for this submission
+			each marking in markings
+				.marking
+					p Marked By: #{marking.markerName}
+					div
+						each part in marking.marksheet.parts
+							p #{part.markschemePartName}: #{part.mark}/#{part.markschemePartWeight}
+					p Overall: #{marking.marksheet.totalMark} / #{marking.marksheet.totalWeight}
+
+			h3 Set Agreed Mark
+			input#agreed-mark-input(type="text")
+			p / #{markscheme.totalWeight}
+			button#agreed-mark-button Set Agreed Mark

@@ -578,3 +578,11 @@ td.inline input {
 p a {
 	display: inline;
 }
+
+@media only screen and (max-width: 960px) {
+	main, header > div {
+		width: auto;
+		margin-left: 1rem;
+		margin-right: 1rem;
+	}
+}
