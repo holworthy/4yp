@@ -264,7 +264,7 @@ let cacheAge = 604800000;
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(compression({threshold: 0}));
-// app.use(minify());
+app.use(minify());
 app.use("/css", express.static("css", {maxAge: cacheAge}));
 app.use("/js", express.static("js", {maxAge: cacheAge}));
 app.use("/fonts", express.static("fonts", {maxAge: cacheAge}));
@@ -1001,7 +1001,7 @@ app.post("/api/projectSelection/new", (req, res) => {
 			res.json(false);
 		}
 	} else {
-		res.json(false);
+		res.json("full");
 	}
 });
 

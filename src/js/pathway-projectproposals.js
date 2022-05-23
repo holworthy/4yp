@@ -54,9 +54,18 @@ window.addEventListener("load", () => {
 			xhr.open("POST", "/api/projectSelection/new");
 			xhr.setRequestHeader("Content-Type", "application/json");
 			xhr.addEventListener("load", () => {
-				if (JSON.parse(xhr.response)){
+				console.log(JSON.parse(xhr.response));
+				if (JSON.parse(xhr.response) === true){
+					console.log("yes");
 					location.reload();
+				} else if (JSON.parse(xhr.response) == "full") {
+					console.log("full2");
+					let p = document.createElement("p");
+					p.appendChild(document.createTextNode("All projects selected"))
+					p.classList.add("red-text");
+					curr.parentElement.appendChild(p);
 				} else {
+					console.log("no");
 					let p = document.createElement("p");
 					p.appendChild(document.createTextNode("Project already selected"));
 					p.classList.add('red-text');
