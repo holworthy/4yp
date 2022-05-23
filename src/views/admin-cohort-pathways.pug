@@ -1,0 +1,10 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Pick a pathway
+			each pathway in pathways
+				a(href="/cohorts/"+cohortId+"/students/"+studentId+"/pathways/"+pathway.id) #{pathway.name}

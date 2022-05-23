@@ -101,7 +101,7 @@ html(lang="en")
 										else
 											| Not yet created
 									td #{student.deferring ? "Yes" : "No"}
-									td #{student.pathway}
+									td #{student.pathwayName}
 									td
 										button(onclick="removeStudent(this)", data-student-id=student.studentId) Remove
 
