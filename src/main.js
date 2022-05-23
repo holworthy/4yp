@@ -61,7 +61,6 @@ db.exec("CREATE VIEW IF NOT EXISTS cohortsMembershipsFilled AS SELECT cohorts.na
 db.exec("CREATE VIEW IF NOT EXISTS projectsStudentsFilled AS SELECT projects.projectProposalId AS projectProjectProposalId, projects.githubLink AS projectGithubLink, projects.overleafLink AS projectOverleafLink, projects.cohortId AS projectCohortId, users.name AS studentName, users.nickname AS studentNickname, users.email AS studentEmail, users.salt AS studentSalt, users.passwordHash AS studentPasswordHash, users.campusCardNumber AS studentCampusCardNumber, users.threeTwoThree AS studentThreeTwoThree, users.maxNumToSupervise AS studentMaxNumToSupervise, users.isAdmin AS studentIsAdmin, users.isStudent AS studentIsStudent, users.isSupervisor AS studentIsSupervisor, users.isHubstaff AS studentIsHubstaff, projectsStudents.* FROM projectsStudents LEFT JOIN projects ON projectsStudents.projectId = projects.id LEFT JOIN users ON projectsStudents.studentId = users.id;");
 db.exec("CREATE VIEW IF NOT EXISTS markingFilled AS SELECT submissions.deliverableId AS submissionDeliverableId, submissions.projectId AS submissionProjectId, submissions.studentId AS submissionStudentId, submissions.file AS submissionFile, submissions.createdOn AS submissionCreatedOn, marksheets.markschemeId AS marksheetMarkschemeId, users.name AS markerName, users.nickname AS markerNickname, users.email AS markerEmail, users.salt AS markerSalt, users.passwordHash AS markerPasswordHash, users.campusCardNumber AS markerCampusCardNumber, users.threeTwoThree AS markerThreeTwoThree, users.maxNumToSupervise AS markerMaxNumToSupervise, users.isAdmin AS markerIsAdmin, users.isStudent AS markerIsStudent, users.isSupervisor AS markerIsSupervisor, users.isHubstaff AS markerIsHubstaff, marking.* FROM marking LEFT JOIN submissions ON marking.submissionId = submissions.id LEFT JOIN marksheets ON marking.marksheetId = marksheets.id LEFT JOIN users ON marking.markerId = users.id;");
 db.exec("CREATE VIEW IF NOT EXISTS marksheetsFilled AS SELECT markschemes.name AS markschemeName, SUM(mark) AS totalMark, SUM(weight) AS totalWeight, marksheets.* FROM marksheets LEFT JOIN markschemes ON marksheets.markschemeId = markschemes.id LEFT JOIN marksheetsParts ON marksheets.id = marksheetsParts.marksheetId LEFT JOIN markschemesParts ON markschemesParts.id = marksheetsParts.markschemePartId GROUP BY marksheets.id");
-
 db.exec("CREATE VIEW IF NOT EXISTS markschemesFilled AS SELECT markschemes.*, SUM(weight) AS totalWeight FROM markschemes LEFT JOIN markschemesParts ON markschemesParts.markschemeId = markschemes.id GROUP BY markschemes.id");
 
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
@@ -1314,6 +1313,11 @@ app.get("/projects", (req, res) => {
 	res.render("projects", {projects: getAllProjects()});
 });
 
+function getAgreedMarksByStudentId(studentId) {
+	let stmt = db.prepare("SELECT agreedMarks.id, agreedMarks.mark, agreedMarks.total, submissions.id AS submissionId FROM submissions INNER JOIN agreedMarks ON submissions.agreedMarksId = agreedMarks.id WHERE studentId = ?");
+	return stmt.all(studentId);
+}
+
 // TODO: for the love of all things good this needs a refactor
 app.get("/projects/:projectId", (req, res) => {
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
@@ -1327,13 +1331,15 @@ app.get("/projects/:projectId", (req, res) => {
 	for(let i = 0; i < deliverables.length; i++)
 		deliverables[i].submissions = getSubmissionsByDeliverableIdAndProjectIdAndStudentId(deliverables[i].id, req.params.projectId, req.session.user.id);
 
+	// TODO: agreedmarks add deliverable name
 	res.render("project", {
 		project: project,
 		projectStudents: projectStudentsStmt.all(req.params.projectId),
 		projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
 		deliverables: deliverables,
 		submissions: getSubmissionsByProjectIdAndStudentId(project.id, req.session.user.id),
-		allProjectSubmissions: getSubmissionsByProjectId(req.params.projectId)
+		allProjectSubmissions: getSubmissionsByProjectId(req.params.projectId),
+		agreedMarks: getAgreedMarksByStudentId(req.session.user.id)
 	});
 });
 
