@@ -61,7 +61,7 @@ main.fullwidth {
 }
 
 .red-text {
-	color: var(--red);
+	color: red;
 }
 
 .proposal-image {

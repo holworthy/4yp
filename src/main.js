@@ -264,7 +264,7 @@ let cacheAge = 604800000;
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(compression({threshold: 0}));
-app.use(minify());
+// app.use(minify());
 app.use("/css", express.static("css", {maxAge: cacheAge}));
 app.use("/js", express.static("js", {maxAge: cacheAge}));
 app.use("/fonts", express.static("fonts", {maxAge: cacheAge}));
@@ -489,7 +489,6 @@ app.get("/cohorts/:cohortId", (req, res) => {
 				
 				let cohortStudentsStmt = db.prepare("SELECT cohortsMemberships.*, cohortsMemberships.studentId, pathways.name AS pathwayName, users.name, p1.title AS choice1Title, p2.title AS choice2Title, p3.title AS choice3Title, p4.title AS assignedChoiceTitle, CASE WHEN numStudents IS NULL THEN 0 ELSE numStudents END AS numStudents FROM cohortsMemberships LEFT JOIN users ON cohortsMemberships.studentId = users.id LEFT JOIN projectProposals p1 ON cohortsMemberships.choice1 = p1.id LEFT JOIN projectProposals p2 ON cohortsMemberships.choice2 = p2.id LEFT JOIN projectProposals p3 ON cohortsMemberships.choice3 = p3.id LEFT JOIN projectProposals p4 ON cohortsMemberships.assignedChoice = p4.id LEFT JOIN projects ON cohortsMemberships.projectId = projects.id LEFT JOIN pathways ON cohortsMemberships.pathwayId = pathways.id LEFT JOIN (SELECT projectsStudents.projectId, COUNT(projectsStudents.projectId) AS numStudents FROM projectsStudents GROUP BY projectsStudents.projectId) AS counts ON projects.id = counts.projectId WHERE cohortsMemberships.cohortId = ?");
 				let cohortStudents = cohortStudentsStmt.all(req.params.cohortId);
-				console.log(cohortStudents[0]);
 				
 				let deliverables = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName, markschemes.name AS markschemeName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id LEFT JOIN markschemes ON deliverablesMemberships.markschemeId = markschemes.id  WHERE deliverablesMemberships.cohortId = ?").all(req.params.cohortId);
 				
@@ -690,7 +689,6 @@ app.get("/api/all-pathways", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		console.log(getAllCohortPathways(req.query.cohortId));
 		res.json(getAllCohortPathways(req.query.cohortId));
 	}
 });
@@ -979,37 +977,58 @@ app.post("/api/projectSelection/new", (req, res) => {
 
 	let membership = getCohortMembershipByCohortIdAndStudentId(cohortId, studentId);
 	if(membership.choice1 == null) {
-		let choice1Stmt = db.prepare("UPDATE cohortsMemberships SET choice1 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
-		choice1Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
-		res.sendStatus(200);
+		if (membership.choice2 != projectId && membership.choice3 != projectId) {
+			let choice1Stmt = db.prepare("UPDATE cohortsMemberships SET choice1 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
+			choice1Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
+			res.json(true);
+		} else {
+			res.json(false);
+		}
 	} else if(membership.choice2 == null) {
-		let choice2Stmt = db.prepare("UPDATE cohortsMemberships SET choice2 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
-		choice2Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
-		res.sendStatus(200);
+		if (membership.choice1 != projectId && membership.choice3 != projectId) {
+			let choice2Stmt = db.prepare("UPDATE cohortsMemberships SET choice2 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
+			choice2Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
+			res.json(true);
+		} else {
+			res.json(false);
+		}
 	} else if(membership.choice3 == null) {
-		let choice3Stmt = db.prepare("UPDATE cohortsMemberships SET choice3 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
-		choice3Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
-		res.sendStatus(200);
+		if (membership.choice1 != projectId && membership.choice2 != projectId) {
+			let choice3Stmt = db.prepare("UPDATE cohortsMemberships SET choice3 = ?, pathwayId = ? WHERE studentId = ? AND cohortId = ?");
+			choice3Stmt.run(projectId, pathwayId, membership.studentId, cohortId);
+			res.json(true);
+		} else {
+			res.json(false);
+		}
+	} else {
+		res.json(false);
 	}
 });
 
 // TODO: this removes choices for every cohort for that student
 app.post("/api/projectSelection/remove", (req, res) => {
-	if (req.body.choiceId == 1) {
-		let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice1 = null WHERE studentId = ?");
-		choiceStmt.run(req.session.user.id);
-		res.sendStatus(200);
+	try {
+		if (req.body.choiceId == 1) {
+			let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice1 = null WHERE studentId = ? AND cohortID = ?");
+			choiceStmt.run(req.session.user.id, req.body.cohortId);
+			res.json(true);
+		}
+		else if (req.body.choiceId == 2) {
+			let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice2 = null WHERE studentId = ? AND cohortID = ?");
+			choiceStmt.run(req.session.user.id, req.body.cohortId);
+			res.json(true);
+		}
+		else if (req.body.choiceId == 3) {
+			let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice3 = null WHERE studentId = ? AND cohortID = ?");
+			choiceStmt.run(req.session.user.id, req.body.cohortId);
+			res.json(true);
+		} else {
+			res.json(false);
+		}
+	} catch(e) {
+		console.log(e);
 	}
-	else if (req.body.choiceId == 2) {
-		let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice2 = null WHERE studentId = ?");
-		choiceStmt.run(req.session.user.id);
-		res.sendStatus(200);
-	}
-	else if (req.body.choiceId == 3) {
-		let choiceStmt = db.prepare("UPDATE cohortsMemberships SET choice3 = null WHERE studentId = ?");
-		choiceStmt.run(req.session.user.id);
-		res.sendStatus(200);
-	}
+	
 });
 
 // TODO: this assumes that each student is only in one cohort. need to get the cohort from the req

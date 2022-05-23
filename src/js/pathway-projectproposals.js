@@ -54,8 +54,14 @@ window.addEventListener("load", () => {
 			xhr.open("POST", "/api/projectSelection/new");
 			xhr.setRequestHeader("Content-Type", "application/json");
 			xhr.addEventListener("load", () => {
-				location.reload();
-				// TODO: make smoother
+				if (JSON.parse(xhr.response)){
+					location.reload();
+				} else {
+					let p = document.createElement("p");
+					p.appendChild(document.createTextNode("Project already selected"));
+					p.classList.add('red-text');
+					curr.parentElement.appendChild(p);
+				}
 			});
 			xhr.addEventListener("error", () => {
 				console.log("error with XHR");
@@ -84,6 +90,7 @@ window.addEventListener("load", () => {
 				console.log("error with XHR");
 			});
 			xhr.send(JSON.stringify({
+				cohortId: location.href.split("/")[4],
 				choiceId: curr.dataset.choiceId
 			}))
 		});
