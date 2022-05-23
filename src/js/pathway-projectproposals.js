@@ -40,7 +40,8 @@ function swapItems(from, to) {
 	});
 	xhr.send(JSON.stringify({
 		fromId: from,
-		toId: to
+		toId: to,
+		cohortId: location.href.split("/")[4]
 	}))
 }
 

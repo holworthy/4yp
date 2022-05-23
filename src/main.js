@@ -914,56 +914,6 @@ app.get("/pathways/:id", (req, res) => {
 	}
 });
 
-// TODO: this only allows choices for first cohort user is in
-// TODO: should this be deleted?
-// TODO: not all of it
-// app.get("/pathways/:pathwayId/projectproposals", (req, res) => {
-// 	let pathwayId = req.params.pathwayId;
-// 	try{
-// 		let projectProposalsStmt = db.prepare("SELECT projectProposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposalsPathways.pathwayId = ?");
-// 		let projectProposals = projectProposalsStmt.all(pathwayId);
-
-// 		let getCS = db.prepare("SELECT * FROM cohortsMemberships WHERE studentId = ?");
-// 		let rowCS = getCS.get(req.session.user.id);
-
-// 		let choice1 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice1); 
-// 		let choice2 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice2);
-// 		let choice3 = db.prepare("SELECT projectproposals.*, users.name AS createdByName FROM projectProposalsPathways INNER JOIN projectProposals ON projectProposals.id = projectProposalsPathways.projectProposalId LEFT JOIN users ON projectProposals.createdBy = users.id WHERE projectProposals.id = ?").get(rowCS.choice3);
-// 		let choices = [choice1, choice2, choice3];
-
-// 		res.render("pathway-projectproposals", {
-// 			pathway: getPathwayById(pathwayId),
-// 			projectProposals: projectProposals,
-// 			choices: choices
-// 		});
-// 	}
-// 	catch(e) {
-// 		console.log(e);
-// 		res.redirect("/pathways");
-// 	}
-// });
-
-// app.get("/pathways/:pathwayId/deliverables", (req, res) => {
-// 	res.render("pathway-deliverables", {
-// 		pathway: getPathwayById(req.params.pathwayId),
-// 		deliverables: getDeliverablesByPathwayId(req.params.pathwayId)
-// 	});
-// });
-// app.get("/pathways/:pathwayId/deliverables/new", (req, res) => {
-// 	res.render("pathway-deliverables-new");
-// });
-// app.post("/pathways/:pathwayId/deliverables/new", (req, res) => {
-// 	let stmt = db.prepare("INSERT INTO deliverables (pathwayId, name, weighting, type) VALUES (?, ?, ?, ?)");
-// 	let result = stmt.run(req.params.pathwayId, req.body.name, req.body.weighting, 0);
-// 	res.redirect("/pathways/"+req.params.pathwayId+"/deliverables/" + result.lastInsertRowid);
-// });
-// app.get("/pathways/:pathwayId/deliverables/:deliverableId", (req, res) => {
-// 	res.render("pathway-deliverable", {
-// 		pathway: getPathwayById(req.params.pathwayId),
-// 		deliverable: getDeliverableById(req.params.deliverableId)
-// 	});
-// });
-
 // TODO: this should return some json rather than use HTTP response codes
 app.post("/api/projectSelection/new", (req, res) => {
 	let projectId = req.body.projectId;
@@ -1001,7 +951,6 @@ app.post("/api/projectSelection/new", (req, res) => {
 	}
 });
 
-// TODO: this removes choices for every cohort for that student
 app.post("/api/projectSelection/remove", (req, res) => {
 	try {
 		if (req.body.choiceId == 1) {
@@ -1027,33 +976,32 @@ app.post("/api/projectSelection/remove", (req, res) => {
 	
 });
 
-// TODO: this assumes that each student is only in one cohort. need to get the cohort from the req
 app.post("/api/projectSelection/swap", (req, res) => {
 	if (req.body.fromId == 0)
-		from = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice1;
+		from = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ? AND cohortId = ?").get(req.session.user.id, req.body.cohortId).choice1;
 	else if (req.body.fromId == 1)
-		from = db.prepare("SELECT choice2 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice2;
+		from = db.prepare("SELECT choice2 FROM cohortsMemberships WHERE studentId = ? AND cohortId = ?").get(req.session.user.id, req.body.cohortId).choice2;
 	else
-		from = db.prepare("SELECT choice3 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice3;
+		from = db.prepare("SELECT choice3 FROM cohortsMemberships WHERE studentId = ? AND cohortId = ?").get(req.session.user.id, req.body.cohortId).choice3;
 	console.log(from);
 	if (req.body.toId == 0) {
-		to = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice1;
-		db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ?").run(from, req.session.user.id);
+		to = db.prepare("SELECT choice1 FROM cohortsMemberships WHERE studentId = ? AND cohortId = ?").get(req.session.user.id, req.body.cohortId).choice1;
+		db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ? AND cohortId = ?").run(from, req.session.user.id, req.body.cohortId);
 	}
 	else if (req.body.toId == 1) {
-		to = db.prepare("SELECT choice2 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice2;
-		db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ?").run(from, req.session.user.id);
+		to = db.prepare("SELECT choice2 FROM cohortsMemberships WHERE studentId = ? AND cohortId = ?").get(req.session.user.id, req.body.cohortId).choice2;
+		db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ? AND cohortId = ?").run(from, req.session.user.id, req.body.cohortId);
 	}
 	else{
-		to = db.prepare("SELECT choice3 FROM cohortsMemberships WHERE studentId = ?").get(req.session.user.id).choice3;
-		db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ?").run(from, req.session.user.id);
+		to = db.prepare("SELECT choice3 FROM cohortsMemberships WHERE studentId = ? AND cohortId = ?").get(req.session.user.id, req.body.cohortId).choice3;
+		db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ? AND cohortId = ?").run(from, req.session.user.id), req.body.cohortId;
 	}
 	if (req.body.fromId == 0)
-		db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ?").run(to, req.session.user.id);
+		db.prepare("UPDATE cohortsMemberships SET choice1 = ? WHERE studentId = ? AND cohortId = ?").run(to, req.session.user.id, req.body.cohortId);
 	else if (req.body.fromId == 1)
-		db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ?").run(to, req.session.user.id);
+		db.prepare("UPDATE cohortsMemberships SET choice2 = ? WHERE studentId = ? AND cohortId = ?").run(to, req.session.user.id, req.body.cohortId);
 	else
-		db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ?").run(to, req.session.user.id);
+		db.prepare("UPDATE cohortsMemberships SET choice3 = ? WHERE studentId = ? AND cohortId = ?").run(to, req.session.user.id, req.body.cohortId);
 });
 
 app.get("/projectproposals", (req, res) => {
