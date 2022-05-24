@@ -69,8 +69,21 @@ html(lang="en")
 					p No supervisors assigned yet
 
 				h3 Submissions
-				each submission in allProjectSubmissions
-					p
-						a(href="/submissions/" + submission.id) #{submission.createdOn}
-						|  by 
-						a(href="/users/" + submission.studentId) #{submission.studentName}
+				h4 Unmarked
+				if (unmarkedProjectSubmissions.length > 0)
+					each submission in unmarkedProjectSubmissions
+						p
+							a(href="/submissions/" + submission.id) #{submission.deliverableName} Submitted On #{submission.createdOn}
+							|  by 
+							a(href="/users/" + submission.studentId) #{submission.studentName}
+				else 
+					p No Unmarked Submissions For This Project
+				h4 Marked
+				if (markedProjectSubmissions.length > 0)
+					each submission in markedProjectSubmissions
+						p
+							a(href="/submissions/" + submission.id) #{submission.deliverableName} Submitted On  #{submission.createdOn}
+							|  by 
+							a(href="/users/" + submission.studentId) #{submission.studentName}
+				else 
+					p No Marked Submissions For This Project
