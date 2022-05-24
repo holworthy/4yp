@@ -269,7 +269,6 @@ app.use("/css", express.static("css", {maxAge: cacheAge}));
 app.use("/js", express.static("js", {maxAge: cacheAge}));
 app.use("/fonts", express.static("fonts", {maxAge: cacheAge}));
 app.use("/img", express.static("img", {maxAge: cacheAge}));
-// TODO: decide if we want to cache these
 app.use("/media", express.static("./media"));
 app.use("/uploads", express.static("./uploads"));
 app.set("view engine", "pug");
@@ -482,7 +481,6 @@ function getPathwaysNotInCohort(cohortId) {
 	return stmt.all(cohortId);
 }
 
-// TODO: update student view of this page
 app.get("/cohorts/:cohortId", (req, res) => {
 	let cohortId = req.params.cohortId;
 	
@@ -681,7 +679,6 @@ function getDeliverableMembershipsByCohortIdAndPathwayId(cohortId, pathwayId) {
 	return stmt.all(cohortId, pathwayId);
 }
 
-// TODO: move /pathways/:pathwayId here
 app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 	let cohortId = req.params.cohortId;
 	let pathwayId = req.params.pathwayId;
@@ -1617,5 +1614,16 @@ app.post("/api/set-agreed-mark", (req, res) => {
 
 // TODO: who has and who hasnt uploaded a submission for a deliverable
 // SELECT * FROM cohortsMemberships LEFT JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId LEFT JOIN submissions ON deliverablesMemberships.deliverableId = submissions.deliverableId AND cohortsMemberships.studentId = submissions.studentId
+
+
+/*
+BIG TODO:
+- type on deliverables
+- agreed marks mark + who did it
+- agreed marks agreed column
+- display somewhere useful
+- calculate final mark
+- do all the checks!
+*/
 
 app.listen(8080);
