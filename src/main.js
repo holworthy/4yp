@@ -62,6 +62,7 @@ db.exec("CREATE VIEW IF NOT EXISTS marksheetsFilled AS SELECT markschemes.name A
 db.exec("CREATE VIEW IF NOT EXISTS markschemesFilled AS SELECT markschemes.*, SUM(weight) AS totalWeight FROM markschemes LEFT JOIN markschemesParts ON markschemesParts.markschemeId = markschemes.id GROUP BY markschemes.id");
 
 db.exec("CREATE TRIGGER IF NOT EXISTS pathwayCreated AFTER INSERT ON pathways BEGIN INSERT INTO pathwaysModerators SELECT NEW.id AS pathwayId, users.id AS moderatorId FROM users WHERE users.isSupervisor = 1; END");
+db.exec("CREATE TRIGGER IF NOT EXISTS cohortPathwayRemoved AFTER DELETE ON cohortsPathways BEGIN DELETE FROM deliverablesMemberships WHERE deliverablesMemberships.cohortId = OLD.cohortId AND deliverablesMemberships.pathwayId = OLD.pathwayId; END");
 
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
@@ -100,8 +101,6 @@ db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development'
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Web-Based Programming', 'CMP-4011A')");
 
 db.exec("INSERT OR IGNORE INTO deliverables(name) VALUES ('Progress and Engagement Report'), ('Poster'), ('Final Report'), ('Code')");
-db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (1, 1, 1, '2022-05-20', 50, 1)");
-db.exec("INSERT OR IGNORE INTO deliverablesMemberships VALUES (3, 1, 1, '2022-05-20', 50, 1)");
 
 // function definitions
 function getUserById(userId) {
@@ -262,7 +261,7 @@ let cacheAge = 604800000;
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(compression({threshold: 0}));
-app.use(minify());
+// app.use(minify());
 app.use("/css", express.static("css", {maxAge: cacheAge}));
 app.use("/js", express.static("js", {maxAge: cacheAge}));
 app.use("/fonts", express.static("fonts", {maxAge: cacheAge}));
@@ -408,7 +407,7 @@ app.get("/cohorts/archived", (req, res) => res.send("archived cohorts"));
 
 app.post("/api/add-pathway-cohort", (req, res) => {
 	try {
-		db.prepare("INSERT INTO cohortsPathways(cohortId, pathwayId) VALUES (?, ?)").run(req.query.cohortId, req.body.pathwayId);
+		db.prepare("INSERT INTO cohortsPathways(cohortId, pathwayId) VALUES (?, ?)").run(req.body.cohortId, req.body.pathwayId);
 		res.json(true);
 	} catch {
 		res.json(false);
@@ -470,9 +469,20 @@ app.post("/api/assign-project-student", (req, res) => {
 	}
 });
 
+function getPathwaysInCohort(cohortId) {
+	let stmt = db.prepare("SELECT * FROM pathways WHERE id IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
+	return stmt.all(cohortId);
+}
+
+function getPathwaysNotInCohort(cohortId) {
+	let stmt = db.prepare("SELECT * FROM pathways WHERE id NOT IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
+	return stmt.all(cohortId);
+}
+
+// TODO: update student view of this page
 app.get("/cohorts/:cohortId", (req, res) => {
 	let cohortId = req.params.cohortId;
-
+	
 	let membership = getCohortMembershipByCohortIdAndStudentId(cohortId, req.session.user.id);
 	if(!membership && req.session.user.isStudent) {
 		res.redirect("/cohorts");
@@ -533,6 +543,27 @@ app.get("/cohorts/:cohortId", (req, res) => {
 			}
 		}
 	}
+});
+
+app.get("/cohorts/:cohortId/add-pathway", (req, res) => {
+	let pathways = getPathwaysNotInCohort(req.params.cohortId);
+	console.log(pathways);
+	if(pathways.length == 0) {
+		res.redirect("/cohorts/" + req.params.cohortId);
+	} else {
+		res.render("cohort_add-pathway", {
+			cohort: getCohortById(req.params.cohortId),
+			pathways: pathways
+		});
+	}
+});
+
+app.post("/cohorts/:cohortId/add-pathway", (req, res) => {
+	let cohortId = req.params.cohortId;
+	let pathwayId = req.body.pathwayId;
+	let stmt = db.prepare("INSERT OR IGNORE INTO cohortsPathways(cohortId, pathwayId) VALUES (?, ?)");
+	stmt.run(cohortId, pathwayId);
+	res.redirect("/cohorts/" + cohortId + "/pathways/" + pathwayId);
 });
 
 app.get("/cohorts/:cohortId/assignprojects", (req, res) => {
@@ -642,6 +673,12 @@ app.get("/cohorts/:cohortId/pathways", (req, res) => {
 	});
 });
 
+function getDeliverableMembershipsByCohortIdAndPathwayId(cohortId, pathwayId) {
+	let stmt = db.prepare("SELECT deliverablesMemberships.*, deliverables.name AS deliverableName, pathways.name AS pathwayName, markschemes.name AS markschemeName FROM deliverablesMemberships LEFT JOIN  deliverables ON deliverablesMemberships.deliverableId = deliverables.id LEFT JOIN pathways ON deliverablesMemberships.pathwayId = pathways.id LEFT JOIN markschemes ON deliverablesMemberships.markschemeId = markschemes.id WHERE deliverablesMemberships.cohortId = ? AND deliverablesMemberships.pathwayId = ?");
+	return stmt.all(cohortId, pathwayId);
+}
+
+// TODO: move /pathways/:pathwayId here
 app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 	let cohortId = req.params.cohortId;
 	let pathwayId = req.params.pathwayId;
@@ -650,7 +687,7 @@ app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 		let projectproposals = getProjectProposalsByPathwayId(pathwayId);
 		let membership = getCohortMembershipByCohortIdAndStudentId(cohortId, req.session.user.id);
 
-		res.render("pathway-projectproposals", {
+		res.render("cohort-pathway", {
 			cohort: getCohortById(cohortId),
 			pathway: getPathwayById(pathwayId),
 			membership: membership,
@@ -663,9 +700,42 @@ app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 		});
 	}
 	catch(e) {
-		console.log(e);
-		res.redirect("/pathways");
+		res.render("cohort-pathway", {
+			cohort: getCohortById(cohortId),
+			pathway: getPathwayById(pathwayId),
+			deliverables: getDeliverableMembershipsByCohortIdAndPathwayId(cohortId, pathwayId)
+		});
 	}
+});
+
+function getDeliverablesNotInCohortAndPathway(cohortId, pathwayId) {
+	let stmt = db.prepare("SELECT * FROM deliverables WHERE id NOT IN (SELECT deliverableId FROM deliverablesMemberships WHERE cohortId = ? AND pathwayId = ?)");
+	return stmt.all(cohortId, pathwayId);
+}
+
+// TODO: make sure we have markschemes first
+
+app.get("/cohorts/:cohortId/pathways/:pathwayId/add-deliverable", (req, res) => {
+	let cohortId = req.params.cohortId;
+	let pathwayId = req.params.pathwayId;
+
+	let deliverables = getDeliverablesNotInCohortAndPathway(cohortId, pathwayId);
+	if(deliverables.length == 0) {
+		res.redirect("/cohorts/"+cohortId+"/pathways/"+pathwayId);
+	} else {
+		res.render("cohort_pathway_add-deliverable", {
+			cohort: getCohortById(cohortId),
+			pathway: getPathwayById(pathwayId),
+			deliverables: deliverables,
+			markschemes: getAllMarkSchemes()
+		});
+	}	
+});
+
+app.post("/cohorts/:cohortId/pathways/:pathwayId/add-deliverable", (req, res) => {
+	let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting, markschemeId) VALUES (?, ?, ?, ?, ?, ?)");
+	stmt.run(req.body.deliverableId, req.params.cohortId, req.params.pathwayId, req.body.dueDate, req.body.weight, req.body.markschemeId);
+	res.redirect("/cohorts/"+req.params.cohortId+"/pathways/"+req.params.pathwayId);
 });
 
 app.get("/cohorts/:cohortId/pathways/:pathwayId/donechoosing", (req, res) => {
@@ -719,13 +789,12 @@ app.post("/api/add-deliverable-to-cohort", (req, res) => {
 		res.sendStatus(403);
 	} else {
 		if (Date.parse(req.body.dueDate) > new Date()){
-			let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting) VALUES (?, ?, ?, ?, ?)");
-			stmt.run(req.body.id, req.query.cohortId, req.body.pathway, req.body.dueDate, req.body.weight);
+			let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting, markschemeId) VALUES (?, ?, ?, ?, ?, ?)");
+			stmt.run(req.body.id, req.query.cohortId, req.body.pathway, req.body.dueDate, req.body.weight, req.body.markscheme);
 			res.redirect("/cohorts/"+req.query.cohortId);
 		} else {
 			// TODO: handle this
 		}
-		
 	}
 });
 

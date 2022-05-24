@@ -1,0 +1,13 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 #{cohort.name}
+			form(method="post")
+				select(name="pathwayId")
+					each pathway in pathways
+						option(value=pathway.id) #{pathway.name}
+				input(type="submit", value="Add Pathway To Cohort")

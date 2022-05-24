@@ -4,9 +4,12 @@ function addPathway(addButton){
 		if (JSON.parse(xhr.response))
 			location.reload();
 	});
-	xhr.open("POST", "/api/add-pathway-cohort?cohortId="+location.pathname.substring(9));
+	xhr.open("POST", "/api/add-pathway-cohort");
 	xhr.setRequestHeader("Content-Type", "application/json");
-	xhr.send(JSON.stringify({pathwayId: document.getElementById("pathways").value}));
+	xhr.send(JSON.stringify({
+		cohortId: location.pathname.substring(9),
+		pathwayId: document.getElementById("pathways").value
+	}));
 }
 
 function removePathway(removeButton){
