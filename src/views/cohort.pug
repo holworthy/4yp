@@ -41,9 +41,10 @@ html(lang="en")
 			if user.isAdmin
 				div
 					h2 #{cohort.name}
-					a(href="/cohorts/"+cohort.id+"/add-pathway") Add Pathway
-					p or
-					a(href="/pathways/new") Create a new pathway
+					p
+						a(href="/cohorts/"+cohort.id+"/add-pathway") Add Pathway
+						|  or 
+						a(href="/pathways/new") Create a new pathway
 
 					if pathwaysCohort.length == 0
 						p.red-text You need to add some pathways first!
