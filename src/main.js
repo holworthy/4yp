@@ -66,7 +66,7 @@ db.exec("CREATE TRIGGER IF NOT EXISTS cohortPathwayRemoved AFTER DELETE ON cohor
 
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
-db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin,, isSupervisor) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Sammy Student', 'Sammy', 'sammy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100000000', 'abc12xyz', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Simon Supervisor', 'Simon', 'simon@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
@@ -462,7 +462,7 @@ app.post("/api/assign-project-student", (req, res) => {
 
 	let membership = getCohortMembershipByCohortIdAndStudentId(cohortId, studentId);
 	if (req.session.user.isAdmin && membership) {
-		db.prepare("UPDATE cohortsMemberships SET assignedChoice = ?, pathwayId = ? WHERE cohortId = ? AND studentId = ?").run(req.body.projectId, req.body.pathwayId, cohortId, studentId);
+		db.prepare("UPDATE cohortsMemberships SET assignedChoice = ?, pathwayId = ?, doneChoosing = 1 WHERE cohortId = ? AND studentId = ?").run(req.body.projectId, req.body.pathwayId, cohortId, studentId);
 		res.json(true);
 	} else {
 		res.sendStatus(403);
@@ -1347,9 +1347,30 @@ app.get("/overview", (req, res) => {
 	});
 });
 
-// TODO: do something useful with this
+// TODO: creat projects after manual assign doesn't set done choosing to true
+
 app.get("/marking", (req, res) => {
-	
+	let allUnmarkedSubmissions = [];
+	let supUnmarkedList = [];
+	let modUnmarkedList = [];
+	if (req.session.user.isAdmin || req.session.user.isSupervisor) {
+		if (req.session.user.isAdmin) {
+			allUnmarkedSubmissions = db.prepare("SELECT submissions.*, student.campusCardNumber, marker.name AS markerName, marker.id AS markerId, deliverables.name AS deliverableName FROM submissions LEFT JOIN users student ON submissions.studentId = student.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN projectsSupervisors ON submissions.projectId = projectsSupervisors.projectId LEFT JOIN users marker ON projectsSupervisors.supervisorId = marker.id WHERE submissions.id NOT IN (SELECT submissionId FROM marking) UNION ALL SELECT submissions.*, student.campusCardNumber, marker.name AS markerName, marker.id AS markerId, deliverables.name AS deliverableName FROM submissions LEFT JOIN users student ON submissions.studentId = student.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN projectsModerators ON submissions.projectId = projectsModerators.projectId LEFT JOIN users marker ON projectsModerators.moderatorId = marker.id WHERE submissions.id NOT IN (SELECT submissionId FROM marking) AND marker.name NOT NULL ORDER BY deliverableName").all();
+		}
+		if (req.session.user.isSupervisor) {
+			// get supervision unmarked
+			supUnmarkedList = db.prepare("SELECT submissions.*, users.campusCardNumber, deliverables.name AS deliverableName FROM submissions  LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE id IN (SELECT projectId FROM projectsSupervisors WHERE supervisorId = ?)) AND submissions.id NOT IN (SELECT submissionId FROM marking)").all(req.session.user.id);
+			// get moderator unmarked
+			modUnmarkedList = db.prepare("SELECT submissions.*, users.campusCardNumber, deliverables.name AS deliverableName FROM submissions  LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE id IN (SELECT projectId FROM projectsModerators WHERE moderatorId = ?)) AND submissions.id NOT IN (SELECT submissionId FROM marking)").all(req.session.user.id);
+		}
+	} else {
+		res.send(403);
+	}
+	res.render("marking-overview", {
+		allUnmarkedSubmissions: allUnmarkedSubmissions,
+		supUnmarkedList: supUnmarkedList,
+		modUnmarkedList: modUnmarkedList
+	});
 });
 
 app.get("/marking/:submissionId", (req, res) => {

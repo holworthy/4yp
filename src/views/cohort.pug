@@ -64,7 +64,7 @@ html(lang="en")
 											if pathway.deliverableCount == 0
 												p.red-text 0
 											else
-												p #{pathway.deliverableCount}
+												a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id) #{pathway.deliverableCount}
 										td
 											a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/add-deliverable") Add Deliverable 	
 										td

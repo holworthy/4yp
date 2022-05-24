@@ -1,0 +1,31 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			if (user.isSupervisor)
+				h2 Unmarked Supervisor Submissions
+				if (supUnmarkedList.length > 0)
+					each submission in supUnmarkedList
+						div.container
+							a(href="/marking/"+submission.id) #{submission.deliverableName} Made By #{submission.campusCardNumber}
+				else 
+					p No unmarked Submissions you supervise 
+				h2 Unmarked Moderator Submissions 
+				if (modUnmarkedList.length > 0)
+					each submission in modUnmarkedList
+						div.container
+							a(href="/marking/"+submission.id) #{submission.deliverableName} Made By #{submission.campusCardNumber}
+				else 
+					p No unmarked Submissions you moderate 
+			if (user.isAdmin)
+				h2 All Unmarked Submissions 
+				if (allUnmarkedSubmissions.length > 0)
+					each submission in allUnmarkedSubmissions
+						.container 
+							p #{submission.deliverableName} Made By #{submission.campusCardNumber} To Be Marked By 
+							a(href="/users/"+submission.markerId) #{submission.markerName}
+				else
+					p No Unmarked Submissions
