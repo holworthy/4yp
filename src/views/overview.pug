@@ -32,24 +32,10 @@ html(lang="en")
 					each project in projectsSupervising
 						div
 							a(href="/projects/" + project.id) #{project.projectProposalTitle}
-							div
 								each studentMembership in project.studentMemberships
-									div
-										p #{studentMembership.studentName}
-										div
-											each deliverable in studentMembership.deliverables
-												if deliverable.submissions.length > 0
-													div
-														p #{deliverable.name}
-														div
-															each submission in deliverable.submissions
-																div
-																	a(href="/submissions/"+submission.id) #{submission.createdOn}
-																	div
-																		each marked in submission.marking
-																			div
-																				p #{j(marked)}
-
+										p By #{studentMembership.studentName}
+							if project.hasUnmarked 
+								p.red-text Unmarked submissions
 				if projectsSupervising.length == 0
 					p None at the moment
 
