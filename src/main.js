@@ -1537,6 +1537,16 @@ app.get("/deliverables", (req, res) => {
 	res.sendStatus(200);
 });
 
+app.get("/deliverables/new", (req, res) => {
+	res.render("deliverables-new");
+});
+
+app.post("/deliverables/new", (req, res) => {
+	let stmt = db.prepare("INSERT INTO deliverables (name) VALUES (?)");
+	let result = stmt.run(req.body.name);
+	res.redirect("/deliverables/" + result.lastInsertRowid);
+});
+
 // TODO: add description to deliverables
 app.get("/deliverables/:deliverableId", (req, res) => {
 	let deliverableId = req.params.deliverableId;
