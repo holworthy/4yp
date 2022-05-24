@@ -1,3 +1,4 @@
+doctype html
 html(lang="en")
 	head
 		include includes/head.pug
@@ -11,32 +12,29 @@ html(lang="en")
 			if user.isAdmin
 				h3 Add deliverable to pathway
 				a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/add-deliverable") Add Deliverable 
-				//- a(href="/Deliverable/new") Create New Deliverable 
-				//- h4 Search 
-				//- input#deliverable-name-input(type="text", placeholder="Type a deliverable name")
-				//- #deliverable-box
-
 				
-
-				h3 Current deliverables on pathway
-				table
-					tr 
-						th Name
-						th Weighting 
-						th Due Date 
-						th Marksheet
-						th Edit/Remove
-					each deliverable in deliverables
-						tr
-							td(data-deliverable-id=deliverable.deliverableId)
-								a(href="/deliverables/"+deliverable.deliverableId) #{deliverable.deliverableName}
-							td(data-weight=deliverable.weighting) #{deliverable.weighting}
-							td(data-date=deliverable.dueDate) #{deliverable.dueDate}
-							td(data-marksheet-id=deliverable.marksheetId)
-								a(href="/markschemes/"+deliverable.markschemeId) #{deliverable.markschemeName}
-							td
-								button(onclick="edit(this)") Edit
-								button(onclick="remove(this)") Remove
+				if deliverables.length > 0
+					h3 Current deliverables on pathway
+					table
+						tr 
+							th Name
+							th Weighting 
+							th Due Date 
+							th Marksheet
+							th Edit/Remove
+						each deliverable in deliverables
+							tr
+								td(data-deliverable-id=deliverable.deliverableId)
+									a(href="/deliverables/"+deliverable.deliverableId) #{deliverable.deliverableName}
+								td(data-weight=deliverable.weighting) #{deliverable.weighting}
+								td(data-date=deliverable.dueDate) #{deliverable.dueDate}
+								td(data-marksheet-id=deliverable.marksheetId)
+									a(href="/markschemes/"+deliverable.markschemeId) #{deliverable.markschemeName}
+								td
+									a.button(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/edit-deliverable/"+deliverable.deliverableId) Edit
+									a.button(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/remove-deliverable/"+deliverable.deliverableId) Remove
+					
+				a(href="/cohorts/"+cohort.id) Go Back
 
 			if user.isStudent
 				if !(choices.every(choice => (choice == null)))

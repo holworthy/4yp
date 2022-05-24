@@ -45,15 +45,6 @@ html(lang="en")
 					p or
 					a(href="/pathways/new") Create a new pathway
 
-					h3 Add Pathway
-					if pathways.length > 0
-						select(name="pathways", id="pathways")
-							each pathway in pathways
-								option(value=pathway.id) #{pathway.name}
-						button(style="width: auto;", onclick="addPathway(this)") Add Pathway
-					else
-						a(href="/pathways/new") Create New Pathway
-
 					if pathwaysCohort.length == 0
 						p.red-text You need to add some pathways first!
 					else
@@ -62,13 +53,20 @@ html(lang="en")
 								tr
 									th Pathway
 									th Number of Deliverables
-									th Remove
+									th Add Deliverables
+									th Remove Pathway
 							tbody
 								each pathway in pathwaysCohort 
 									tr
 										td
 											a(href="/pathways/"+pathway.id) #{pathway.name}
-										td No
+										td
+											if pathway.deliverableCount == 0
+												p.red-text 0
+											else
+												p #{pathway.deliverableCount}
+										td
+											a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/add-deliverable") Add Deliverable 	
 										td
 											button(style="width: auto;", onclick="removePathway(this)", data-pathway-id=pathway.id) Remove Pathway
 					

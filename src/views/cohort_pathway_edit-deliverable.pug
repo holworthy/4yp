@@ -1,0 +1,18 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 #{cohort.name} - #{pathway.name} - Edit Deliverable - #{deliverable.name}
+			
+			form(method="post") 
+				select(name="markschemeId")
+					each markscheme in markschemes
+						option(value=markscheme.id, selected=(deliverableMembership.markschemeId == markscheme.id)) #{markscheme.name}
+				input(type="date", name="dueDate", value=deliverableMembership.dueDate)
+				input(type="number", placeholder="weight", min="0", name="weight", value=deliverableMembership.weighting)
+				input(type="submit", value="Edit Deliverable")
+
+			a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id) Go Back 

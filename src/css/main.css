@@ -306,6 +306,23 @@ select {
 	padding: 0.5rem;
 }
 
+input, select {
+	width: 100%;
+	display: block;
+	margin-top: 0.5rem;
+	border-radius: 0.25rem;
+	border: 1px solid #ccc;
+}
+
+.button {
+	padding: 0.5rem;
+	border-radius: 0.25rem;
+	border: 1px solid #ccc;
+	background-color: #eee;
+	text-decoration: none;
+	text-align: center;
+}
+
 .flex {
 	display: flex;
 	gap: 0.5rem;

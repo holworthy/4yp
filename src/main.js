@@ -169,7 +169,7 @@ function getAllPathways() {
 }
 
 function getAllCohortPathways(cohortId) {
-	let stmt = db.prepare("SELECT * FROM pathways WHERE id IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
+	let stmt = db.prepare("SELECT *, CASE WHEN deliverableCount IS NULL THEN 0 ELSE deliverableCount END AS deliverableCount FROM pathways LEFT JOIN (SELECT pathwayId, COUNT(*) AS deliverableCount FROM deliverablesMemberships GROUP BY pathwayId) AS deliverableCounts ON pathways.id = deliverableCounts.pathwayId WHERE pathways.id IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
 	return stmt.all(cohortId);
 }
 
@@ -735,6 +735,37 @@ app.get("/cohorts/:cohortId/pathways/:pathwayId/add-deliverable", (req, res) => 
 app.post("/cohorts/:cohortId/pathways/:pathwayId/add-deliverable", (req, res) => {
 	let stmt = db.prepare("INSERT INTO deliverablesMemberships(deliverableId, cohortId, pathwayId, dueDate, weighting, markschemeId) VALUES (?, ?, ?, ?, ?, ?)");
 	stmt.run(req.body.deliverableId, req.params.cohortId, req.params.pathwayId, req.body.dueDate, req.body.weight, req.body.markschemeId);
+	res.redirect("/cohorts/"+req.params.cohortId+"/pathways/"+req.params.pathwayId);
+});
+
+app.get("/cohorts/:cohortId/pathways/:pathwayId/edit-deliverable/:deliverableId", (req, res) => {
+	let cohortId = req.params.cohortId;
+	let pathwayId = req.params.pathwayId;
+	let deliverableId = req.params.deliverableId;
+
+	res.render("cohort_pathway_edit-deliverable", {
+		cohort: getCohortById(cohortId),
+		pathway: getPathwayById(pathwayId),
+		deliverables: getDeliverablesByCohortIdAndPathwayId(cohortId, pathwayId),
+		markschemes: getAllMarkSchemes(),
+		deliverable: getDeliverableById(deliverableId),
+		deliverableMembership: getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(deliverableId, cohortId, pathwayId)
+	});	
+});
+
+app.post("/cohorts/:cohortId/pathways/:pathwayId/edit-deliverable/:deliverableId", (req, res) => {
+	let cohortId = req.params.cohortId;
+	let pathwayId = req.params.pathwayId;
+	let deliverableId = req.params.deliverableId;
+
+	let stmt = db.prepare("UPDATE deliverablesMemberships SET markschemeId = ?, dueDate = ?, weighting = ? WHERE deliverableId = ? AND cohortId = ? AND pathwayId = ?");
+	stmt.run(req.body.markschemeId, req.body.dueDate, req.body.weight, deliverableId, cohortId, pathwayId);
+	res.redirect("/cohorts/"+req.params.cohortId+"/pathways/"+req.params.pathwayId);
+});
+
+app.get("/cohorts/:cohortId/pathways/:pathwayId/remove-deliverable/:deliverableId", (req, res) => {
+	let stmt = db.prepare("DELETE FROM deliverablesMemberships WHERE cohortId = ? AND pathwayId = ? AND deliverableId = ?");
+	stmt.run(req.params.cohortId, req.params.pathwayId, req.params.deliverableId);
 	res.redirect("/cohorts/"+req.params.cohortId+"/pathways/"+req.params.pathwayId);
 });
 
