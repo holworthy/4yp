@@ -733,7 +733,7 @@ app.get("/api/deliverable-search", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT * FROM deliverables WHERE deliverables.name LIKE '%' || ? || '%' LIMIT 5"); // TODO: check for SQL injection
+		let stmt = db.prepare("SELECT * FROM deliverables WHERE deliverables.name LIKE '%' || ? || '%' LIMIT 5");
 		res.json(stmt.all(req.query.name));
 	}
 });
@@ -759,7 +759,7 @@ app.get("/api/student-search", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' AND isStudent = 1 AND id NOT IN (SELECT studentId FROM cohortsMemberships WHERE cohortId = ?) LIMIT 5"); // TODO: check for SQL injection
+		let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' AND isStudent = 1 AND id NOT IN (SELECT studentId FROM cohortsMemberships WHERE cohortId = ?) LIMIT 5");
 		res.json(stmt.all(req.query.name, req.query.cohortId));
 	}
 });
@@ -774,11 +774,10 @@ app.post("/api/remove-from-cohort", (req, res) => {
 });
 
 app.get("/api/add-student-to-cohort", (req, res) => {
-	// TODO: permission check
-	if(!req.session.loggedIn) {
+	if(!req.session.user.isAdmin) {
 		res.sendStatus(403);
 	} else {
-		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsMemberships(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0)"); // TODO: check for SQL injection
+		let stmt = db.prepare("INSERT OR IGNORE INTO cohortsMemberships(cohortId, studentId, choice1, choice2, choice3, doneChoosing, projectId, deferring) VALUES (?, ?, NULL, NULL, NULL, 0, NULL, 0)");
 		stmt.run(req.query.cohortId, req.query.studentId);
 		res.sendStatus(200);
 	}
@@ -809,8 +808,7 @@ app.post("/projectproposal/new", (req, res) => {
 });
 
 app.post("/api/tag-search", (req, res) => {
-	// TODO: permission check here too
-	if(!req.session.loggedIn) {
+	if(!req.session.user.isSupervisor) {
 		res.sendStatus(403);
 	} else {
 		tagIds = req.body;
@@ -914,7 +912,6 @@ app.get("/pathways/:id", (req, res) => {
 	}
 });
 
-// TODO: this should return some json rather than use HTTP response codes
 app.post("/api/projectSelection/new", (req, res) => {
 	let projectId = req.body.projectId;
 	let cohortId = req.body.cohortId;
@@ -1256,20 +1253,33 @@ app.get("/marking", (req, res) => {
 });
 
 app.get("/marking/:submissionId", (req, res) => {
-	// TODO: check we can actually mark this either as a supervisor or as a moderator
-
 	let submission = getSubmissionById(req.params.submissionId);
 	let project = getProjectById(submission.projectId);
 	let cohortMembership = getCohortMembershipByCohortIdAndStudentId(project.cohortId, submission.studentId);
 	let deliverableMembership = getDeliverablesMembershipByDeliverableIdAndCohortIdAndPathwayId(submission.deliverableId, submission.cohortId, cohortMembership.pathwayId);
 	let markscheme = getMarkSchemeById(deliverableMembership.markschemeId);
 
-	res.render("marking", {
-		markscheme: markscheme,
-		markschemeParts: getMarkschemePartsByMarkshemeId(markscheme.id),
-		submission: submission,
-		submissionFiles: getSubmissionFilesBySubmissionId(req.params.submissionId)
-	});
+	let supervisorsIds = db.prepare("SELECT * FROM projectsSupervisors WHERE projectId = ?").all(submission.projectId);
+	let moderatorsIds = db.prepare("SELECT * FROM projectsModerators WHERE projectId = ?").all(submission.projectId);
+	let validIds = [];
+
+	for (let i = 0; i < supervisorsIds.length; i++) {
+		validIds.push(supervisorsIds[i].supervisorId);
+	}
+	for (let i = 0; i < moderatorsIds.length; i++) {
+		validIds.push(moderatorsIds[i].moderatorId);
+	}
+
+	if (validIds.includes(req.session.user.id)){
+		res.render("marking", {
+			markscheme: markscheme,
+			markschemeParts: getMarkschemePartsByMarkshemeId(markscheme.id),
+			submission: submission,
+			submissionFiles: getSubmissionFilesBySubmissionId(req.params.submissionId)
+		});
+	} else {
+		res.sendStatus(403);
+	}
 });
 
 app.post("/api/marking", (req, res) => {
