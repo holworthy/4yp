@@ -72,6 +72,9 @@ db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Sarah Supervisor', 'Sarah', 'sarah@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
+for(let i = 1; i <= 10; i++)
+	db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Student "+i+"', 'Student "+i+"', 'student"+i+"@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '10020000"+i+"', 'abc123x"+i+"', 1)");
+
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
@@ -169,8 +172,8 @@ function getAllPathways() {
 }
 
 function getAllCohortPathways(cohortId) {
-	let stmt = db.prepare("SELECT *, CASE WHEN deliverableCount IS NULL THEN 0 ELSE deliverableCount END AS deliverableCount FROM pathways LEFT JOIN (SELECT pathwayId, COUNT(*) AS deliverableCount FROM deliverablesMemberships GROUP BY pathwayId) AS deliverableCounts ON pathways.id = deliverableCounts.pathwayId WHERE pathways.id IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
-	return stmt.all(cohortId);
+	let stmt = db.prepare("SELECT *, CASE WHEN deliverableCount IS NULL THEN 0 ELSE deliverableCount END AS deliverableCount FROM pathways LEFT JOIN (SELECT pathwayId, COUNT(*) AS deliverableCount FROM deliverablesMemberships WHERE cohortId = ? GROUP BY pathwayId) AS deliverableCounts ON pathways.id = deliverableCounts.pathwayId WHERE pathways.id IN (SELECT pathwayId FROM cohortsPathways WHERE cohortId = ?)");
+	return stmt.all(cohortId, cohortId);
 }
 
 function getProjectById(projectId) {
