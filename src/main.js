@@ -66,7 +66,7 @@ db.exec("CREATE TRIGGER IF NOT EXISTS cohortPathwayRemoved AFTER DELETE ON cohor
 
 db.exec("INSERT OR IGNORE INTO cohorts(name, archived) VALUES ('Cohort 2021/2022', 0)");
 
-db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin,, isSupervisor) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1, 1)");
+db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isAdmin, isSupervisor) VALUES ('Amy Admin', 'Amy', 'amy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Sammy Student', 'Sammy', 'sammy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100000000', 'abc12xyz', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Simon Supervisor', 'Simon', 'simon@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
@@ -269,7 +269,6 @@ app.use("/css", express.static("css", {maxAge: cacheAge}));
 app.use("/js", express.static("js", {maxAge: cacheAge}));
 app.use("/fonts", express.static("fonts", {maxAge: cacheAge}));
 app.use("/img", express.static("img", {maxAge: cacheAge}));
-// TODO: decide if we want to cache these
 app.use("/media", express.static("./media"));
 app.use("/uploads", express.static("./uploads"));
 app.set("view engine", "pug");
@@ -482,7 +481,6 @@ function getPathwaysNotInCohort(cohortId) {
 	return stmt.all(cohortId);
 }
 
-// TODO: update student view of this page
 app.get("/cohorts/:cohortId", (req, res) => {
 	let cohortId = req.params.cohortId;
 	
@@ -681,7 +679,6 @@ function getDeliverableMembershipsByCohortIdAndPathwayId(cohortId, pathwayId) {
 	return stmt.all(cohortId, pathwayId);
 }
 
-// TODO: move /pathways/:pathwayId here
 app.get("/cohorts/:cohortId/pathways/:pathwayId", (req, res) => {
 	let cohortId = req.params.cohortId;
 	let pathwayId = req.params.pathwayId;
@@ -1625,5 +1622,16 @@ app.post("/api/set-agreed-mark", (req, res) => {
 
 // TODO: who has and who hasnt uploaded a submission for a deliverable
 // SELECT * FROM cohortsMemberships LEFT JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId LEFT JOIN submissions ON deliverablesMemberships.deliverableId = submissions.deliverableId AND cohortsMemberships.studentId = submissions.studentId
+
+
+/*
+BIG TODO:
+- type on deliverables
+- agreed marks mark + who did it
+- agreed marks agreed column
+- display somewhere useful
+- calculate final mark
+- do all the checks!
+*/
 
 app.listen(8080);
