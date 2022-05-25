@@ -28,14 +28,14 @@ db.exec("CREATE TABLE IF NOT EXISTS projectProposalsMedia (projectProposalId INT
 db.exec("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsTags (projectProposalId INTEGER, tagId INTEGER, UNIQUE (projectProposalId, tagId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (tagId) REFERENCES tags(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()))");
+db.exec("CREATE TABLE IF NOT EXISTS cohorts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, archived INTEGER, createdOn DATETIME DEFAULT (DATETIME()), done INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS pathways (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
 db.exec("CREATE TABLE IF NOT EXISTS cohortsPathways (cohortId INTEGER, pathwayId INTEGER, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, projectProposalId INTEGER, githubLink TEXT, overleafLink TEXT, cohortId INTEGER, pathwayId INTEGER, FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id))");
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
-// TODO: remove extra rows if exist sup mod proj
+
 db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER , UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
 
 db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, code TEXT UNIQUE)");
@@ -775,7 +775,16 @@ function getProjectsByPathwayId(pathwayId) {
 	return stmt.all(pathwayId);
 }
 
+app.get("/api/cohorts/:cohortId/done", (req, res) => {
+	if (req.session.user.isAdmin){
+		
+	} else {
+		res.sendStatus(403);
+	}
+});
+
 app.get("/cohorts/:cohortId/marks", (req, res) => {
+	let noChecks = true;
 	let rows = db.prepare("SELECT submissions.id AS submissionId, pathways.name AS pathwayName, users.campusCardNumber AS studentNum, deliverables.name AS deliverableName, agreedMarks.mark AS agreedMark FROM submissions LEFT JOIN projects ON submissions.projectId = projects.id LEFT JOIN pathways ON projects.pathwayId = pathways.id LEFT JOIN projectsStudents ON projects.id = projectsStudents.projectId LEFT JOIN users ON projectsStudents.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN agreedMarks ON submissions.agreedMarksId = agreedMarks.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE cohortId = ?)").all(req.params.cohortId);
 	for (let row of rows) {
 		row.marking = db.prepare("SELECT totalMark, users.name AS markerName, markerId FROM submissions LEFT JOIN marking ON submissions.id = marking.submissionId LEFT JOIN marksheetsFilled ON marking.marksheetId = marksheetsFilled.id LEFT JOIN users ON users.id = marking.markerId WHERE submissions.id = ?").all(row.submissionId);
@@ -797,10 +806,16 @@ app.get("/cohorts/:cohortId/marks", (req, res) => {
 				if (mark.totalMark > max)
 					max = mark.totalMark;
 			}
-			if (max - min > 10)
+			if (max - min > 10) {
 				span = true;
-			if (!(row.agreedMark > min && row.agreedMark < max) && row.agreedMark)
+				nochecks = false;
+			}
+				
+			if (!(row.agreedMark >= min && row.agreedMark <= max) && row.agreedMark) {
 				alert = true;
+				nochecks = false;
+			}
+				
 		}
 		row.alert = alert;
 		row.span = span;
@@ -808,7 +823,8 @@ app.get("/cohorts/:cohortId/marks", (req, res) => {
 
 	res.render("cohort-marks", {
 		cohort: getCohortById(req.params.cohortId),
-		rows: rows
+		rows: rows,
+		noChecks: noChecks
 	});
 });
 
@@ -881,7 +897,7 @@ app.get("/api/deliverable-search", (req, res) => {
 });
 
 app.get("/cohorts/:cohortId/createprojects", (req, res) => {
-		// TODO: fix this code that jack clearly wrote while he was asleep
+		// TODO: fix this
 		let cohortId = req.params.cohortId;
 		let memberships = db.prepare("SELECT studentId, assignedChoice, pathwayId FROM cohortsMemberships WHERE cohortId = ? AND assignedChoice IS NOT NULL").all(cohortId);
 		for (let i = 0; i < memberships.length; i++) {
@@ -1038,8 +1054,6 @@ app.get("/pathways/:id", (req, res) => {
 			}
 
 			let supervisors = [];
-			// TODO:
-			// let supervisorsStmt = db.prepare("SELECT * FROM supervisorsPathways INNER JOIN users ON supervisorsPathways.supervisorId = users.id");
 			
 			res.render("pathway", {
 				pathway: getPathwayById(pathwayId),
@@ -1433,7 +1447,6 @@ app.get("/marking/:submissionId", (req, res) => {
 });
 
 app.post("/api/marking", (req, res) => {
-	// TODO: this can probably be simplified using one of the views
 	let submissionId = req.body.submissionId;
 	let submission = getSubmissionById(submissionId);
 	let cohortMembership = getCohortMembershipByCohortIdAndStudentId(submission.cohortId, submission.studentId);
@@ -1459,7 +1472,7 @@ app.post("/api/marking", (req, res) => {
 	});
 });
 
-// TODO: do something with this
+// TODO: currently unused
 app.get("/marksheets", (req, res) => {
 
 });
@@ -1522,7 +1535,6 @@ app.get("/projects/:projectId", (req, res) => {
 
 	let unmarkedProjectSubmissions = db.prepare("SELECT submissions.*, users.name AS studentName, deliverables.name AS deliverableName FROM submissions LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE projectId = ? AND submissions.id NOT IN (SELECT marking.submissionId FROM marking)").all(req.params.projectId);
 
-	// TODO: agreedmarks
 	res.render("project", {
 		project: project,
 		projectStudents: projectStudentsStmt.all(req.params.projectId),
@@ -1590,7 +1602,7 @@ app.post("/projects/:projectId/makesubmission/:deliverableId", (req, res) => {
 });
 
 app.get("/submissions", (req, res) => {
-	// TODO: do something useful with this
+	// TODO: add view of all submissions
 });
 
 app.get("/submissions/:submissionId", (req, res) => {
@@ -1601,7 +1613,7 @@ app.get("/submissions/:submissionId", (req, res) => {
 	});
 });
 
-// TODO: do something with this
+// TODO: add a view of all deliverables
 app.get("/deliverables", (req, res) => {
 	res.sendStatus(200);
 });
@@ -1658,17 +1670,19 @@ app.get("/submissions/:submissionId/create-agreed-marks", (req, res) => {
 	}
 });
 
-// TODO: check mark is actually okay
-// TODO: check user is admin
 app.post("/api/set-agreed-mark", (req, res) => {
-	let submissionId = req.body.submissionId;
-	let mark = req.body.mark;
-	let markscheme = getMarkschemeBySubmissionId(submissionId);
-	let agreedMarkStmt = db.prepare("INSERT INTO agreedMarks(mark, total, createdBy) VALUES (?, ?, ?)");
-	let agreedMarkResult = agreedMarkStmt.run(mark, markscheme.totalWeight, req.session.user.id);
-	let submissionStmt = db.prepare("UPDATE submissions SET agreedMarksId = ? WHERE id = ?");
-	submissionStmt.run(agreedMarkResult.lastInsertRowid, submissionId);
-	res.json(true);
+	if (req.session.useer.isAdmin) {
+		let submissionId = req.body.submissionId;
+		let mark = req.body.mark;
+		let markscheme = getMarkschemeBySubmissionId(submissionId);
+		let agreedMarkStmt = db.prepare("INSERT INTO agreedMarks(mark, total, createdBy) VALUES (?, ?, ?)");
+		let agreedMarkResult = agreedMarkStmt.run(mark, markscheme.totalWeight, req.session.user.id);
+		let submissionStmt = db.prepare("UPDATE submissions SET agreedMarksId = ? WHERE id = ?");
+		submissionStmt.run(agreedMarkResult.lastInsertRowid, submissionId);
+		res.json(true);
+	} else {
+		res.sendStatus(403);
+	}
 });
 
 function getAgreedMarksById(agreedMarksId) {
@@ -1690,12 +1704,7 @@ app.get("/agreedmarks/:agreedMarksId/agree", (req, res) => {
 
 /*
 BIG TODO:
-- type on deliverables
-- display somewhere useful
 - calculate final mark
-- do all the checks!
-	- agreed between markings
-	- markings difference 10 max
 */
 
 app.listen(8080);

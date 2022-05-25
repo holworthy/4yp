@@ -37,6 +37,7 @@
 - [x] Add github and overleaf links to projects
 - [x] Multiple mark schemes
 - [ ] Resource links for projects
+- [ ] Handle Inspection type deliverables
 
 ## Could
 
