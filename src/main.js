@@ -830,7 +830,49 @@ app.get("/cohorts/:cohortId/marks", (req, res) => {
 
 app.get("/cohorts/:cohortId/marks.csv", (req, res) => {
 	res.setHeader("Content-Type", "text/csv");
-	res.send("a,b,c\n1,2,3\n");
+
+	let string = "Pathway,Student,Deliverable,Marks,Agreed Mark,Agreed In Bounds,Span In Range\n";
+
+	let noChecks = true;
+	let rows = db.prepare("SELECT submissions.id AS submissionId, pathways.name AS pathwayName, users.campusCardNumber AS studentNum, deliverables.name AS deliverableName, agreedMarks.mark AS agreedMark FROM submissions LEFT JOIN projects ON submissions.projectId = projects.id LEFT JOIN pathways ON projects.pathwayId = pathways.id LEFT JOIN projectsStudents ON projects.id = projectsStudents.projectId LEFT JOIN users ON projectsStudents.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN agreedMarks ON submissions.agreedMarksId = agreedMarks.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE cohortId = ?)").all(req.params.cohortId);
+	for (let row of rows) {
+		row.marking = db.prepare("SELECT totalMark, users.name AS markerName, markerId FROM submissions LEFT JOIN marking ON submissions.id = marking.submissionId LEFT JOIN marksheetsFilled ON marking.marksheetId = marksheetsFilled.id LEFT JOIN users ON users.id = marking.markerId WHERE submissions.id = ?").all(row.submissionId);
+		for (let mark of row.marking) {
+			let alert = false;
+			let span = false;
+			if (row.marking.length > 0) {
+				min = row.marking[0].totalMark;
+				max = row.marking[0].totalMark;
+				for (let mark of row.marking) {
+					if (mark.totalMark < min)
+						min = mark.totalMark;
+					if (mark.totalMark > max)
+						max = mark.totalMark;
+				}
+				if (max - min > 10) {
+					span = true;
+					nochecks = false;
+				}
+					
+				if (!(row.agreedMark >= min && row.agreedMark <= max) && row.agreedMark) {
+					alert = true;
+					nochecks = false;
+				}
+					
+			}
+			row.alert = alert;
+			row.span = span;
+
+			let supervisor = db.prepare("SELECT supervisorId FROM submissions LEFT JOIN projectsSupervisors ON submissions.projectId = projectsSupervisors.projectId WHERE submissions.id = ? AND supervisorId = ?").get(row.submissionId, mark.markerId);
+			if (supervisor)
+				mark.role = "supervisor";
+			else
+				mark.role = "moderator";
+
+			string += row.pathwayName + "," + row.studentNum + "," + row.deliverableName + "," + mark.totalMark + "," + mark.markerName + "," + mark.role + "," + row.agreedMark + "," + row.alert + "," + row.span + "\n";
+		}
+	}
+	res.send(string);
 });
 
 app.get("/api/all-pathways", (req, res) => {
