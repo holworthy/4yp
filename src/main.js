@@ -776,30 +776,39 @@ function getProjectsByPathwayId(pathwayId) {
 }
 
 app.get("/cohorts/:cohortId/marks", (req, res) => {
-	let pathways = getPathwaysInCohort(req.params.cohortId);
-
-	// TODO: cohort -> pathway -> project -> deliverablesMemberships -> submissions -> marking -> agreedMarks
-	let cohort = getCohortById(req.params.cohortId);
-	for(let pathway of pathways) {
-		pathways.projects = getProjectsByPathwayId(pathway.id);
-		for(let project of pathways.projects) {
-			project.deliverablesMemberships = getDeliverableMembershipsByCohortIdAndPathwayId(cohort.id, pathway.id);
-
-			for(let deliverableMembership of project.deliverablesMemberships) {
-				let stmt = db.prepare("SELECT * FROM submissions WHERE deliverableId = ? AND projectId = ?");
-				deliverableMembership.submissions = stmt.all(deliverableMembership.deliverableId, project.id);
-				for(let submission of deliverableMembership.submissions) {
-					submission.marking = getMarkingBySubmissionId(submission.id);
-					submission.agreedMarks = getAgreedMarksById(submission.agreedMarksId);
-				}
-			}
+	let rows = db.prepare("SELECT submissions.id AS submissionId, pathways.name AS pathwayName, users.campusCardNumber AS studentNum, deliverables.name AS deliverableName, agreedMarks.mark AS agreedMark FROM submissions LEFT JOIN projects ON submissions.projectId = projects.id LEFT JOIN pathways ON projects.pathwayId = pathways.id LEFT JOIN projectsStudents ON projects.id = projectsStudents.projectId LEFT JOIN users ON projectsStudents.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN agreedMarks ON submissions.agreedMarksId = agreedMarks.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE cohortId = ?)").all(req.params.cohortId);
+	for (let row of rows) {
+		row.marking = db.prepare("SELECT totalMark, users.name AS markerName, markerId FROM submissions LEFT JOIN marking ON submissions.id = marking.submissionId LEFT JOIN marksheetsFilled ON marking.marksheetId = marksheetsFilled.id LEFT JOIN users ON users.id = marking.markerId WHERE submissions.id = ?").all(row.submissionId);
+		for (let mark of row.marking) {
+			let supervisor = db.prepare("SELECT supervisorId FROM submissions LEFT JOIN projectsSupervisors ON submissions.projectId = projectsSupervisors.projectId WHERE submissions.id = ? AND supervisorId = ?").get(row.submissionId, mark.markerId);
+			if (supervisor)
+				mark.role = "supervisor";
+			else
+				mark.role = "moderator";
 		}
+		let alert = false;
+		let span = false;
+		if (row.marking.length > 0) {
+			min = row.marking[0].totalMark;
+			max = row.marking[0].totalMark;
+			for (let mark of row.marking) {
+				if (mark.totalMark < min)
+					min = mark.totalMark;
+				if (mark.totalMark > max)
+					max = mark.totalMark;
+			}
+			if (max - min > 10)
+				span = true;
+			if (!(row.agreedMark > min && row.agreedMark < max) && row.agreedMark)
+				alert = true;
+		}
+		row.alert = alert;
+		row.span = span;
 	}
 
-	console.log(pathways);
-
 	res.render("cohort-marks", {
-		cohort: getCohortById(req.params.cohortId)
+		cohort: getCohortById(req.params.cohortId),
+		rows: rows
 	});
 });
 
