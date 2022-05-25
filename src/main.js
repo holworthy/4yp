@@ -775,6 +775,15 @@ app.get("/cohorts/:cohortId/pathways/:pathwayId/donechoosing", (req, res) => {
 	res.redirect("/cohorts/" + req.params.cohortId);
 });
 
+app.get("/cohorts/:cohortId/marks", (req, res) => {
+	
+});
+
+app.get("/cohorts/:cohortId/marks.csv", (req, res) => {
+	res.setHeader("Content-Type", "text/csv");
+	res.send("a,b,c\n1,2,3\n");
+});
+
 app.get("/api/all-pathways", (req, res) => {
 	if(!req.session.loggedIn) {
 		res.sendStatus(403);
@@ -1635,6 +1644,8 @@ BIG TODO:
 - display somewhere useful
 - calculate final mark
 - do all the checks!
+	- agreed between markings
+	- markings difference 10 max
 */
 
 app.listen(8080);
