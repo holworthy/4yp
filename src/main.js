@@ -45,13 +45,13 @@ db.exec("CREATE TABLE IF NOT EXISTS studentsModules (studentId INTEGER, moduleId
 db.exec("CREATE TABLE IF NOT EXISTS pathwaysModerators (pathwayId INTEGER, moderatorId INTEGER, UNIQUE(pathwayId, moderatorId), FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS projectProposalsPathways (projectProposalId INTEGER, pathwayId INTEGER, UNIQUE(projectProposalId, pathwayId), FOREIGN KEY (projectProposalId) REFERENCES projectProposals(id) ON DELETE CASCADE, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE CASCADE)");
 
-db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type INTEGER)");
+db.exec("CREATE TABLE IF NOT EXISTS deliverables (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, type INTEGER)");
 db.exec("CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, deliverableId INTEGER, projectId INTEGER, studentId INTEGER, file TEXT, createdOn DATETIME DEFAULT (DATETIME()), agreedMarksId INTEGER, FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (projectId) REFERENCES projects(id), FOREIGN KEY (studentId) REFERENCES users(id), FOREIGN KEY (agreedMarksId) REFERENCES agreedMarks(id))");
 db.exec("CREATE TABLE IF NOT EXISTS submissionsFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, url TEXT, name TEXT, UNIQUE(submissionId, url), FOREIGN KEY (submissionId) REFERENCES submissions(id))");
 db.exec("CREATE TABLE IF NOT EXISTS marking (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, marksheetId INTEGER, markerId INTEGER, UNIQUE(submissionId, markerId), FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (marksheetId) REFERENCES marksheets(id), FOREIGN KEY (markerId) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS deliverablesMemberships (deliverableId INTEGER, cohortId INTEGER, pathwayId INTEGER, dueDate TEXT, weighting INTEGER, markschemeId INTEGER, UNIQUE(deliverableId, cohortId, pathwayId), FOREIGN KEY (deliverableId) REFERENCES deliverables(id), FOREIGN KEY (cohortId) REFERENCES cohorts(id), FOREIGN KEY (pathwayId) REFERENCES pathways(id), FOREIGN KEY (markschemeId) REFERENCES markschemes(id))");
 
-db.exec("CREATE TABLE IF NOT EXISTS agreedMarks (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, mark REAL, total INTEGER, FOREIGN KEY (submissionId) REFERENCES submissions(id))");
+db.exec("CREATE TABLE IF NOT EXISTS agreedMarks (id INTEGER PRIMARY KEY AUTOINCREMENT, submissionId INTEGER, mark REAL, total INTEGER, createdBy INTEGER, isAgreed INTEGER DEFAULT 0, FOREIGN KEY (submissionId) REFERENCES submissions(id), FOREIGN KEY (createdBy) REFERENCES users(id))");
 db.exec("CREATE TABLE IF NOT EXISTS agreedMarksMemberships (agreedMarkId INTEGER, markingId INTEGER, FOREIGN KEY (agreedMarkId) REFERENCES agreedMarks(id), FOREIGN KEY (markingId) REFERENCES marking(id))");
 
 db.exec("CREATE VIEW IF NOT EXISTS projectsFilled AS SELECT projects.*, projectProposals.title AS projectProposalTitle, projectProposals.description AS projectProposalDescription, projectProposals.markSchemeId AS projectProposalMarkschemeId, cohorts.name AS cohortName, cohorts.archived AS cohortArchived FROM projects LEFT JOIN projectProposals ON projects.projectProposalId = projectProposals.id LEFT JOIN cohorts ON projects.cohortId = cohorts.id;");
@@ -1573,8 +1573,8 @@ function getMarkschemeBySubmissionId(submissionId) {
 	return getMarkSchemeById(deliverableMembership.markschemeId);
 }
 
-app.get("/agreedmarks/:submissionId", (req, res) => {
-	if(!req.session.user.isAdmin) {
+app.get("/submissions/:submissionId/create-agreed-marks", (req, res) => {
+	if(!req.session.user.isAdmin && !req.session.user.isSupervisor) {
 		res.redirect("/");
 	} else {
 		let submission = getSubmissionById(req.params.submissionId);
@@ -1590,7 +1590,7 @@ app.get("/agreedmarks/:submissionId", (req, res) => {
 				marking.marksheet = getMarksheetById(marking.marksheetId);
 				marking.marksheet.parts = getMarksheetPartsByMarksheetId(marking.marksheetId);
 			}
-			res.render("agreedmarks", {
+			res.render("submission_create-agreed-marks", {
 				submission: submission,
 				markings: markings,
 				markscheme: markscheme
@@ -1605,22 +1605,33 @@ app.post("/api/set-agreed-mark", (req, res) => {
 	let submissionId = req.body.submissionId;
 	let mark = req.body.mark;
 	let markscheme = getMarkschemeBySubmissionId(submissionId);
-	let agreedMarkStmt = db.prepare("INSERT INTO agreedMarks(mark, total) VALUES (?, ?)")
-	let agreedMarkResult = agreedMarkStmt.run(mark, markscheme.totalWeight);
+	let agreedMarkStmt = db.prepare("INSERT INTO agreedMarks(mark, total, createdBy) VALUES (?, ?, ?)");
+	let agreedMarkResult = agreedMarkStmt.run(mark, markscheme.totalWeight, req.session.user.id);
 	let submissionStmt = db.prepare("UPDATE submissions SET agreedMarksId = ? WHERE id = ?");
 	submissionStmt.run(agreedMarkResult.lastInsertRowid, submissionId);
 	res.json(true);
 });
 
-// TODO: who has and who hasnt uploaded a submission for a deliverable
-// SELECT * FROM cohortsMemberships LEFT JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId LEFT JOIN submissions ON deliverablesMemberships.deliverableId = submissions.deliverableId AND cohortsMemberships.studentId = submissions.studentId
+function getAgreedMarksById(agreedMarksId) {
+	let stmt = db.prepare("SELECT * FROM agreedMarks LEFT JOIN submissions ON agreedMarks.id = submissions.agreedMarksId WHERE agreedMarks.id = ?");
+	return stmt.get(agreedMarksId);
+}
 
+app.get("/agreedmarks/:agreedMarksId", (req, res) => {
+	res.render("agreedmarks", {
+		agreedMarks: getAgreedMarksById(req.params.agreedMarksId)
+	});
+});
+
+app.get("/agreedmarks/:agreedMarksId/agree", (req, res) => {
+	let stmt = db.prepare("UPDATE agreedMarks SET isAgreed = 1 WHERE id = ?");
+	stmt.run(req.params.agreedMarksId);
+	res.redirect("/");
+});
 
 /*
 BIG TODO:
 - type on deliverables
-- agreed marks mark + who did it
-- agreed marks agreed column
 - display somewhere useful
 - calculate final mark
 - do all the checks!
