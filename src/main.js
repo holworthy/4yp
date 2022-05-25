@@ -775,8 +775,35 @@ app.get("/cohorts/:cohortId/pathways/:pathwayId/donechoosing", (req, res) => {
 	res.redirect("/cohorts/" + req.params.cohortId);
 });
 
+function getProjectsByPathwayId(pathwayId) {
+	let stmt = db.prepare("SELECT * FROM projects WHERE pathwayId = ?");
+	return stmt.all(pathwayId);
+}
+
 app.get("/cohorts/:cohortId/marks", (req, res) => {
-	
+	let pathways = getPathwaysInCohort(req.params.cohortId);
+
+	// TODO: cohort -> pathway -> project -> deliverablesMemberships -> submissions -> marking -> agreedMarks
+	let cohort = getCohortById(req.params.cohortId);
+	for(let pathway of pathways) {
+		let projects = getProjectsByPathwayId(pathway.id);
+		for(let project of projects) {
+			let deliverablesMemberships = getDeliverableMembershipsByCohortIdAndPathwayId(cohort.id, pathway.id);
+
+			for(let deliverableMembership of deliverablesMemberships) {
+				let stmt = db.prepare("SELECT * FROM submissions WHERE deliverableId = ? AND projectId = ?");
+				let submissions = stmt.all(deliverableMembership.deliverableId, project.id);
+				for(let submission of submissions) {
+					getMarkingBySubmissionId(submission.id);
+					getAgreedMarksById(submission.agreedMarksId);
+				}
+			}
+		}
+	}
+
+	res.render("cohort-marks", {
+		cohort: getCohortById(req.params.cohortId)
+	});
 });
 
 app.get("/cohorts/:cohortId/marks.csv", (req, res) => {
