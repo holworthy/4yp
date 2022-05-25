@@ -12,12 +12,12 @@
 	- [ ] For example if a student did a year in industry there may be a project that is specifically for them
 	- [x] Alternatively just allow admins to manually select a project for a student
 - [x] Prioritise students choices
-- [ ] Projects should have a supervisor and a moderator
-- [ ] Allow admins to check supervisor and moderator marks
+- [x] Projects should have a supervisor and a moderator
+- [x] Allow admins to check supervisor and moderator marks
 - [ ] Email students once marks are approved
 	- [ ] Add a resend option
-- [ ] Check agreed mark is between supervisor and moderator marks
-- [ ] Alert admins if difference in the supervisor and moderator marks is too high
+- [x] Check agreed mark is between supervisor and moderator marks
+- [x] Alert admins if difference in the supervisor and moderator marks is too high
 - [ ] Email all marks to the hub
 	- [ ] Or allow a downloadable page which contains all the data
 - [ ] Allow hub staff/others to change student info

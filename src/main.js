@@ -1567,8 +1567,10 @@ app.post("/projects/:projectId/makesubmission/:deliverableId", (req, res) => {
 	// TODO: check this succeeded
 	let submissionId = result.lastInsertRowid;
 	
-	for(let i = 0; i < req.files.files.length; i++) {
-		let file = req.files.files[i];
+	let files = req.files ? req.files.files.length ? req.files.files : [req.files.files] : [];
+	console.log(files);
+	for(let i = 0; i < files.length; i++) {
+		let file = files[i];
 		let fileNameParts = file.name.split(".");
 		let newFileName = "/uploads/" + file.md5 + "." + fileNameParts[fileNameParts.length - 1];
 		file.mv("." + newFileName);
