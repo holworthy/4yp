@@ -35,7 +35,7 @@ db.exec("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREME
 db.exec("CREATE TABLE IF NOT EXISTS projectsStudents (projectId INTEGER, studentId INTEGER, UNIQUE(projectId, studentId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsSupervisors (projectId INTEGER, supervisorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, supervisorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (supervisorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
 db.exec("CREATE TABLE IF NOT EXISTS projectsModerators (projectId INTEGER, moderatorId INTEGER, marksheetId INTEGER, UNIQUE(projectId, moderatorId), FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE RESTRICT, FOREIGN KEY (moderatorId) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE RESTRICT)");
-
+// TODO: remove extra rows if exist sup mod proj
 db.exec("CREATE TABLE IF NOT EXISTS cohortsMemberships (cohortId INTEGER, studentId INTEGER, choice1 INTEGER, choice2 INTEGER, choice3 INTEGER, assignedChoice INTEGER DEFAULT NULL, doneChoosing INTEGER, projectId INTEGER, deferring INTEGER, pathwayId INTEGER , UNIQUE(cohortId, studentId), FOREIGN KEY (cohortId) REFERENCES cohorts(id) ON DELETE RESTRICT, FOREIGN KEY (studentId) REFERENCES users(id) ON DELETE RESTRICT, FOREIGN KEY (choice1) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice2) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (choice3) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (assignedChoice) REFERENCES projectProposals(id) ON DELETE RESTRICT, FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET DEFAULT, FOREIGN KEY (pathwayId) REFERENCES pathways(id) ON DELETE RESTRICT)");
 
 db.exec("CREATE TABLE IF NOT EXISTS modules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, code TEXT UNIQUE)");
@@ -83,21 +83,16 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 db.exec("INSERT OR IGNORE INTO markschemes(name) VALUES ('Mark Scheme 1')");
 db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Amazingness', 100.0, 1)");
 
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project1', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project2', 'Description here', 1, 0, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId) VALUES ('Example Project3', 'Description here', 1, 0, 1)");
-
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 3)");
+db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (2, 3)")
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
 db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 1)");
 db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (2, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (3, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (4, 2)");
 
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
@@ -786,20 +781,22 @@ app.get("/cohorts/:cohortId/marks", (req, res) => {
 	// TODO: cohort -> pathway -> project -> deliverablesMemberships -> submissions -> marking -> agreedMarks
 	let cohort = getCohortById(req.params.cohortId);
 	for(let pathway of pathways) {
-		let projects = getProjectsByPathwayId(pathway.id);
-		for(let project of projects) {
-			let deliverablesMemberships = getDeliverableMembershipsByCohortIdAndPathwayId(cohort.id, pathway.id);
+		pathways.projects = getProjectsByPathwayId(pathway.id);
+		for(let project of pathways.projects) {
+			project.deliverablesMemberships = getDeliverableMembershipsByCohortIdAndPathwayId(cohort.id, pathway.id);
 
-			for(let deliverableMembership of deliverablesMemberships) {
+			for(let deliverableMembership of project.deliverablesMemberships) {
 				let stmt = db.prepare("SELECT * FROM submissions WHERE deliverableId = ? AND projectId = ?");
-				let submissions = stmt.all(deliverableMembership.deliverableId, project.id);
-				for(let submission of submissions) {
-					getMarkingBySubmissionId(submission.id);
-					getAgreedMarksById(submission.agreedMarksId);
+				deliverableMembership.submissions = stmt.all(deliverableMembership.deliverableId, project.id);
+				for(let submission of deliverableMembership.submissions) {
+					submission.marking = getMarkingBySubmissionId(submission.id);
+					submission.agreedMarks = getAgreedMarksById(submission.agreedMarksId);
 				}
 			}
 		}
 	}
+
+	console.log(pathways);
 
 	res.render("cohort-marks", {
 		cohort: getCohortById(req.params.cohortId)
@@ -1369,21 +1366,21 @@ app.get("/overview", (req, res) => {
 	});
 });
 
-// TODO: creat projects after manual assign doesn't set done choosing to true
-
 app.get("/marking", (req, res) => {
 	let allUnmarkedSubmissions = [];
 	let supUnmarkedList = [];
 	let modUnmarkedList = [];
 	if (req.session.user.isAdmin || req.session.user.isSupervisor) {
 		if (req.session.user.isAdmin) {
-			allUnmarkedSubmissions = db.prepare("SELECT submissions.*, student.campusCardNumber, marker.name AS markerName, marker.id AS markerId, deliverables.name AS deliverableName FROM submissions LEFT JOIN users student ON submissions.studentId = student.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN projectsSupervisors ON submissions.projectId = projectsSupervisors.projectId LEFT JOIN users marker ON projectsSupervisors.supervisorId = marker.id WHERE submissions.id NOT IN (SELECT submissionId FROM marking) UNION ALL SELECT submissions.*, student.campusCardNumber, marker.name AS markerName, marker.id AS markerId, deliverables.name AS deliverableName FROM submissions LEFT JOIN users student ON submissions.studentId = student.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN projectsModerators ON submissions.projectId = projectsModerators.projectId LEFT JOIN users marker ON projectsModerators.moderatorId = marker.id WHERE submissions.id NOT IN (SELECT submissionId FROM marking) AND marker.name NOT NULL ORDER BY deliverableName").all();
+			allUnmarkedSubmissions = db.prepare("SELECT submissions.*, student.campusCardNumber, marker.name AS markerName, marker.id AS markerId, deliverables.name AS deliverableName FROM submissions LEFT JOIN users student ON submissions.studentId = student.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN projectsSupervisors ON submissions.projectId = projectsSupervisors.projectId LEFT JOIN users marker ON projectsSupervisors.supervisorId = marker.id WHERE submissions.id NOT IN (SELECT submissionId FROM marking) UNION ALL SELECT submissions.*, student.campusCardNumber, marker.name AS markerName, marker.id AS markerId, deliverables.name AS deliverableName FROM submissions LEFT JOIN users student ON submissions.studentId = student.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id LEFT JOIN projectsModerators ON submissions.projectId = projectsModerators.projectId LEFT JOIN users marker ON projectsModerators.moderatorId = marker.id WHERE submissions.id NOT IN (SELECT submissionId FROM marking WHERE markerId = marker.id) AND marker.name NOT NULL ORDER BY deliverableName").all();
 		}
 		if (req.session.user.isSupervisor) {
 			// get supervision unmarked
-			supUnmarkedList = db.prepare("SELECT submissions.*, users.campusCardNumber, deliverables.name AS deliverableName FROM submissions  LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE id IN (SELECT projectId FROM projectsSupervisors WHERE supervisorId = ?)) AND submissions.id NOT IN (SELECT submissionId FROM marking)").all(req.session.user.id);
+			supUnmarkedList = db.prepare("SELECT submissions.*, users.campusCardNumber, deliverables.name AS deliverableName FROM submissions  LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE id IN (SELECT projectId FROM projectsSupervisors WHERE supervisorId = ?)) AND submissions.id NOT IN (SELECT submissionId FROM marking WHERE markerId = ?)").all(req.session.user.id, req.session.user.id);
 			// get moderator unmarked
-			modUnmarkedList = db.prepare("SELECT submissions.*, users.campusCardNumber, deliverables.name AS deliverableName FROM submissions  LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE id IN (SELECT projectId FROM projectsModerators WHERE moderatorId = ?)) AND submissions.id NOT IN (SELECT submissionId FROM marking)").all(req.session.user.id);
+			modUnmarkedList = db.prepare("SELECT submissions.*, users.campusCardNumber, deliverables.name AS deliverableName FROM submissions  LEFT JOIN users ON submissions.studentId = users.id LEFT JOIN deliverables ON submissions.deliverableId = deliverables.id WHERE submissions.projectId IN (SELECT id FROM projects WHERE id IN (SELECT projectId FROM projectsModerators WHERE moderatorId = ?)) AND submissions.id NOT IN (SELECT submissionId FROM marking WHERE markerId = ?)").all(req.session.user.id, req.session.user.id);
+			// get not agreed marks
+			notAgreed = db.prepare("SELECT *, deliverables.name AS deliverableName, submissions.id AS submissionId FROM (SELECT * FROM projectsSupervisors WHERE supervisorId = ? UNION ALL SELECT * FROM projectsModerators WHERE moderatorId = ?) AS markers LEFT JOIN projects ON markers.projectId = projects.id LEFT JOIN submissions ON projects.id = submissions.projectId LEFT JOIN agreedMarks ON submissions.agreedMarksId = agreedMarks.id LEFT JOIN deliverables ON deliverables.id = submissions.deliverableId LEFT JOIN users ON submissions.studentId = users.id WHERE (submissions.agreedMarksId IS NULL OR isAgreed = 0) AND (agreedMarks.createdBy <> ? OR agreedMarks.createdBy IS NULL)").all(req.session.user.id, req.session.user.id, req.session.user.id);
 		}
 	} else {
 		res.send(403);
@@ -1391,7 +1388,8 @@ app.get("/marking", (req, res) => {
 	res.render("marking-overview", {
 		allUnmarkedSubmissions: allUnmarkedSubmissions,
 		supUnmarkedList: supUnmarkedList,
-		modUnmarkedList: modUnmarkedList
+		modUnmarkedList: modUnmarkedList,
+		notAgreed: notAgreed
 	});
 });
 
@@ -1482,13 +1480,28 @@ function getAgreedMarksByStudentId(studentId) {
 	return stmt.all(studentId);
 }
 
-// TODO: for the love of all things good this needs a refactor
+app.get("/api/moderator-search", (req, res) => {
+	let supervisor = db.prepare("SELECT * FROM projectsSupervisors WHERE projectId = ?").get(req.query.projectId);
+	console.log(supervisor);
+	let stmt = db.prepare("SELECT id, name, email FROM users WHERE users.name LIKE '%' || ? || '%' AND isSupervisor = 1 AND id != ? LIMIT 5");
+	res.json(stmt.all(req.query.name, supervisor.supervisorId));
+});
+
+app.get("/api/add-moderator-to-project", (req, res) => {
+	if (!req.session.user.isAdmin) {
+		res.sendStatus(403);
+	} else {
+		let stmt = db.prepare("INSERT OR IGNORE INTO projectsModerators(projectId, moderatorId) VALUES (?, ?)");
+		stmt.run(req.query.projectId, req.query.moderatorId);
+		res.sendStatus(200);
+	}
+});
+
 app.get("/projects/:projectId", (req, res) => {
 	let projectStudentsStmt = db.prepare("SELECT * FROM projectsStudents LEFT JOIN users ON projectsStudents.studentId = users.id WHERE projectId = ?");
 	let projectSupervisorsStmt = db.prepare("SELECT * FROM projectsSupervisors LEFT JOIN users ON projectsSupervisors.supervisorId = users.id WHERE projectId = ?");
+	let projectModeratorsStmt = db.prepare("SELECT * FROM projectsModerators LEFT JOIN users ON projectsModerators.moderatorId = users.id WHERE projectId = ?");
 	let deliverablesStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId AND cohortsMemberships.studentId = ? INNER JOIN deliverablesMemberships ON cohortsMemberships.cohortId = deliverablesMemberships.cohortId AND cohortsMemberships.pathwayId = deliverablesMemberships.pathwayId INNER JOIN deliverables ON deliverablesMemberships.deliverableId = deliverables.id WHERE projects.id = ? ORDER BY dueDate ASC");
-	// let deliverablesPerPathwayStmt = db.prepare("SELECT * FROM projects INNER JOIN cohortsMemberships ON projects.id = cohortsMemberships.projectId")
-	// TODO: delete this
 
 	let project = getProjectById(req.params.projectId);
 
@@ -1505,6 +1518,7 @@ app.get("/projects/:projectId", (req, res) => {
 		project: project,
 		projectStudents: projectStudentsStmt.all(req.params.projectId),
 		projectSupervisors: projectSupervisorsStmt.all(req.params.projectId),
+		projectModerators: projectModeratorsStmt.all(req.params.projectId),
 		deliverables: deliverables,
 		submissions: getSubmissionsByProjectIdAndStudentId(project.id, req.session.user.id),
 		markedProjectSubmissions: markedProjectSubmissions,

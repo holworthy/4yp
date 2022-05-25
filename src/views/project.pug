@@ -67,6 +67,17 @@ html(lang="en")
 					a(href="/users/"+supervisor.id) #{supervisor.name}
 				if projectSupervisors.length == 0
 					p No supervisors assigned yet
+				
+				h3 Moderators 
+				each moderator in projectModerators
+					a(href="/users/"+moderator.id) #{moderator.name}
+				if projectModerators.length == 0
+					p No moderators assigned yet
+
+				if user.isAdmin 
+					.m1-top 
+						input#moderator-name-input(type="text", placeholder="Type a moderator name")
+						#moderator-box
 
 				h3 Submissions
 				h4 Unmarked
