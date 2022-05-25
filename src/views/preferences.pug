@@ -1,0 +1,20 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/preferences.js") 
+	body
+		include includes/header.pug
+		main
+			h2 Preferences
+			if user.isSupervisor
+				div
+					h3.m1-top Moderation
+					.pathway-moderation.m1-top
+						div
+							each pathwayModerator in pathwayModerators
+								div
+									input.pathway-moderation-checkbox(type="checkbox", data-pathway-id=pathwayModerator.pathwayId, checked=(pathwayModerator.isModerating == 1))
+									label #{pathwayModerator.pathwayName}
+						button#save-pathway-moderation-button.m1-top Save
+								

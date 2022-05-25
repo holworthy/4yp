@@ -1,0 +1,18 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h1.m1-bottom Cohorts
+			.cohorts
+				each cohort in cohorts
+					a.cohort(href="/cohorts/"+cohort.id)
+						h2 #{cohort.name}
+						p Created on #{cohort.createdOn}
+						p #{cohort.numStudents} Students
+			if user.isAdmin
+				a.m1-top(href="/cohorts/new")
+					h2 Or Create A New Cohort 
+			

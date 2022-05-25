@@ -1,0 +1,45 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			if noChecks
+				h2 All checks passed 
+				a(href="/cohorts/"+cohort.id+"/marks.csv") Generate CSV of final marks 
+			h2 Marks
+			table 
+				tr 
+					th Pathway 
+					th Student 
+					th Deliverable 
+					th Marks
+					th Agreed Mark 
+					th Agreed In Bounds
+					th Span Within Range (10)
+				each row in rows 
+					tr 
+						td #{row.pathwayName}
+						td #{row.studentNum}
+						td #{row.deliverableName}
+						td 
+							table 
+								- let count = 1;
+								each mark in row.marking 
+									tr 
+										th #{count}
+										td #{mark.totalMark}
+										td #{mark.markerName}
+										td #{mark.role}
+									- count += 1;
+						td #{row.agreedMark}
+						if (row.alert)
+							td.red-text ✗
+						else 
+							td.green-text ✓
+						if (row.span)
+							td.red-text ✗
+						else 
+							td.green-text ✓
+				

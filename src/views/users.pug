@@ -1,0 +1,36 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Users
+			table.m1-top
+				thead
+					tr
+						th Name
+						th Nickname
+						th Email
+						th Is A Student?
+						th Campus Card Number
+						th Three Two Three
+						th Is A Supervisor?
+						th Max Number To Supervise
+						th Is An Admin?
+						th Is A Hubstaff?
+				tbody
+					- for(let i = 0; i < users.length; i++) {
+					tr
+						td
+							a(href="/users/"+users[i].id) #{users[i].name}
+						td #{users[i].nickname}
+						td #{users[i].email}
+						td #{users[i].isStudent ? "Yes" : "No"}
+						td #{users[i].campusCardNumber}
+						td #{users[i].threeTwoThree}
+						td #{users[i].isSupervisor ? "Yes" : "No"}
+						td #{users[i].maxNumToSupervise}
+						td #{users[i].isAdmin ? "Yes" : "No"}
+						td #{users[i].isHubstaff ? "Yes" : "No"}
+					- }

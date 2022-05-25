@@ -1,0 +1,141 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/cohort.js")
+	body
+		include includes/header.pug
+		main
+			if user.isStudent
+				h2 #{cohort.name}
+
+				if !membership.doneChoosing
+					p How to pick project topics: 
+					p Click one of these links, pick which pathway you are on, select your top 3 project topics
+
+					a.m1-top(href="/cohorts/"+cohort.id+"/pathways") Pick a pathway
+				else
+					p Your choices have been confirmed!
+					if membership.choice1
+						p Choice 1: 
+							a(href="/projectproposals/"+membership.choice1) #{membership.choice1Title}
+							|  by  
+							a(href="/users/"+membership.choice1CreatedBy) #{membership.choice1CreatedByName}
+						if membership.choice2
+							p Choice 2: 
+								a(href="/projectproposals/"+membership.choice2) #{membership.choice2Title}
+								|  by  
+								a(href="/users/"+membership.choice2CreatedBy) #{membership.choice2CreatedByName}
+							if membership.choice3
+								p Choice 3: 
+									a(href="/projectproposals/"+membership.choice3) #{membership.choice3Title}
+									|  by  
+									a(href="/users/"+membership.choice3CreatedBy) #{membership.choice3CreatedByName}
+							else
+								p You did not select a third choice.
+						else
+							p You did not select a second or third choice.
+					else
+						p You did not select any choices.
+
+			if user.isAdmin
+				div
+					h2 #{cohort.name}
+					p
+						a(href="/cohorts/"+cohort.id+"/add-pathway") Add Pathway
+						|  or 
+						a(href="/pathways/new") Create a new pathway
+
+					if pathwaysCohort.length == 0
+						p.red-text You need to add some pathways first!
+					else
+						table
+							thead
+								tr
+									th Pathway
+									th Number of Deliverables
+									th Add Deliverables
+									th Remove Pathway
+							tbody
+								each pathway in pathwaysCohort 
+									tr
+										td
+											a(href="/pathways/"+pathway.id) #{pathway.name}
+										td
+											if pathway.deliverableCount == 0
+												p.red-text 0
+											else
+												a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id) #{pathway.deliverableCount}
+										td
+											a(href="/cohorts/"+cohort.id+"/pathways/"+pathway.id+"/add-deliverable") Add Deliverable 	
+										td
+											button(style="width: auto;", onclick="removePathway(this)", data-pathway-id=pathway.id) Remove Pathway
+					
+						h3 Add Students
+						div.m1-top
+							input#student-name-input(type="text", placeholder="Type a student name")
+							#student-box
+						table.m1-top
+							thead
+								tr
+									th Student
+									th Choice 1
+									th Choice 2
+									th Choice 3
+									th Assigned Choice
+									th Done Choosing
+									th Project
+									th Deferring
+									th Pathway
+									th Remove
+							tbody
+								each student in cohortStudents
+									tr
+										td #{student.name}
+										td
+											if student.choice1
+												a(href="/projectproposals/" + student.choice1) #{student.choice1Title}
+											else
+												| Not yet picked
+										td
+											if student.choice2
+												a(href="/projectproposals/" + student.choice2) #{student.choice2Title}
+											else
+												| Not yet picked
+										td
+											if student.choice3
+												a(href="/projectproposals/" + student.choice3) #{student.choice3Title}
+											else
+												| Not yet picked
+										td
+											if student.assignedChoice
+												a(href="/projectproposals/" + student.assignedChoice) #{student.assignedChoiceTitle}
+											else
+												a(href="/cohorts/" + cohort.id + "/students/" + student.studentId) Manually Assign 
+										td #{student.doneChoosing ? "Yes" : "No"}
+										td
+											if student.projectId
+												a(href="/projects/" + student.projectId) #{student.numStudents <= 1 ? "Individual" : "Group Of " + student.numStudents}
+											else
+												| Not yet created
+										td #{student.deferring ? "Yes" : "No"}
+										td #{student.pathwayName}
+										td
+											button(onclick="removeStudent(this)", data-student-id=student.studentId) Remove
+
+							if cohortStudents.length == 0
+								tr
+									td(colspan="8") No students in this cohort
+						
+						if assign 
+							.m2-top
+								h2 Assign Projects
+								p.red-text WARNING: THIS ACTION IS NOT REVERSIBLE!
+								a(href="/cohorts/" + cohort.id + "/assignprojects") Assign Projects
+							if create 
+								.m2-top 
+									h2 Create Projects
+									a(href="/cohorts/" + cohort.id + "/createprojects") Create Projects
+								.m2-top 
+									h2 View Marks for whole cohort
+									a(href="/cohorts/"+ cohort.id + "/marks") View Marks

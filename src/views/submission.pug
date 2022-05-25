@@ -1,0 +1,20 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Submission
+			p For deliverable #{submission.deliverableName}
+			p By student #{submission.studentName}
+			p Submission submitted at #{submission.createdOn}
+
+			h3 Files
+			each submissionFile in submissionFiles
+				div
+					a(href=submissionFile.url) #{submissionFile.name}
+
+			if user.isSupervisor
+				h3 Marking
+				a(href="/marking/" + submission.id) Mark this submission 

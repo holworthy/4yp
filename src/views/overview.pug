@@ -1,0 +1,58 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		link(rel="stylesheet", href="/css/overview.css")
+	body 
+		include includes/header.pug
+		main
+			h2 Hello, #{user.nickname}
+			h3.m1-top Things you can do...
+			if user.isStudent
+				each cohort in cohorts
+					if !cohort.doneChoosing
+						p.m1-top Make your project choices for this cohort:
+						a(href="/cohorts/"+cohort.id)  #{cohort.name}
+
+				h3.m1-top What cohorts am I enrolled in?
+				each cohort in cohorts
+					a(href="/cohorts/"+cohort.id)  #{cohort.name}
+
+				h3.m1-top What projects am I involved in?
+				p Coming soon
+				//- each project in projects
+				//- 	a(href="/projects/"+project.id)  #{project.id}
+
+			if user.isSupervisor
+				h3.m1-top Create a project proposal
+				a(href="/projectproposals/new") Create a project proposal 
+
+				h3.m1-top Projects you are supervising
+				div.recpad
+					each project in projectsSupervising
+						div
+							a(href="/projects/" + project.id) #{project.projectProposalTitle}
+								each studentMembership in project.studentMemberships
+										p By #{studentMembership.studentName}
+							if project.hasUnmarked 
+								p.red-text Unmarked submissions
+				if projectsSupervising.length == 0
+					p None at the moment
+				h3.m1-top Marking 
+				a(href="/marking") View all marking
+			if user.isHubstaff
+
+			if user.isAdmin
+				a(href="/users") View all users
+				a(href="/users/me") View yourself  
+				a(href="/pathways") View pathways
+				a(href="/pathways/new") Create a pathway
+				a(href="/cohorts") View cohorts
+				a(href="/cohorts/new") Create a cohort
+				a(href="/projectproposals") View project proposals
+				a(href="/projectproposals/new") Create new project proposal
+				a(href="#") Approve project proposals
+				a(href="/markschemes") View Markschemes
+				a(href="/markschemes/new") Create a markscheme
+				a(href="/modules") View modules
+				a(href="/modules/new") Create a module 

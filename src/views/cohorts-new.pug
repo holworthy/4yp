@@ -1,0 +1,13 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body 
+		include includes/header.pug
+		main
+			h1.m1-bottom Create a cohort
+			form(method="post") 
+				label(for="name") Cohort Name:
+				input(type="text" name="name")
+				input.m1-top(type="submit" value="Create Cohort")
+				

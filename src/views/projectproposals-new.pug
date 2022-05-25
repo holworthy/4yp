@@ -1,0 +1,57 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/projectproposals-new.js") 
+	body
+		include includes/header.pug
+		main
+			h2 New Project Proposal
+			form#new-projectproposal-form(enctype="multipart/form-data")
+				div
+					div
+						label(for="title") Title
+						input#title-input(type="text", name="title")
+					div
+						label(for="description") Description
+						textarea#description-input(name="description", rows="8")
+					div
+						label(for="media") Media
+						input#media-input(type="file", name="media", multiple, accept=".jpg,.jpeg,.mp4,.mov,.avi,.png,.tiff")
+					div
+						label URLs
+						table
+							thead
+								tr
+									th URL
+									th Remove
+							tbody#urls-tbody
+							tfoot
+								tr
+									td
+										input#url-input
+									td
+										button#add-url-button(type="button") Add URL
+					div
+						label Pathways
+						table
+							thead
+								tr
+									th Pathway
+									th Included
+							tbody
+								- for(let i = 0; i < pathways.length; i++) {
+								tr
+									td #{pathways[i].name}
+									td
+										input(type="checkbox", class="pathway-checkbox" name="pathway-checkbox-" + pathways[i].id)
+								- }
+					div.m2-top
+						label#tagsLabel(style="display: none") Tags 
+							.tags#tags(data-current-tags-num=0)
+						label Add Tags
+						div.m1-top
+							input#tag-name-input(type="text", placeholder="Type a Tag")
+							#tag-box
+				button#create-button.m1-top(type="button") Create
+				progress#progress-bar(value="0")

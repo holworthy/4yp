@@ -1,0 +1,10 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+	body
+		include includes/header.pug
+		main
+			h2 Agreed Marks
+			p Current Agreed Mark: #{agreedMarks.mark} / #{agreedMarks.total}
+			a(href="/agreedmarks/"+agreedMarks.id+"/agree") Agree 

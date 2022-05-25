@@ -1,0 +1,30 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/markschemes-new.js")
+	body 
+		include includes/header.pug
+		main
+			h1.m1-bottom Create a Mark Scheme
+			div
+				input#name-input(type="text" name="name", placeholder="Mark Scheme Name")
+
+				table.m1-top
+					thead
+						tr
+							th Part Name
+							th Part Weight
+							th Add/Remove
+					tbody#parts-tbody
+					tfoot
+						tr
+							td
+								input#part-name-input(type="text", placeholder="Part Name")
+							td
+								input#part-weight-input(type="number", min="0", max="100", step="1", placeholder="Part Weight")
+							td
+								button#add-part-button Add
+				
+				button#create-markscheme-button.m1-top Create Mark Scheme
+				

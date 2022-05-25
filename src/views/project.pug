@@ -1,0 +1,100 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		link(rel="stylesheet", href="/css/project.css")
+		script(src="/js/project.js")
+	body
+		include includes/header.pug
+		main
+			if user.isStudent
+				.text-center
+					h2 #{project.projectProposalTitle}
+					a(href="/cohorts/" + project.cohortId) Part of "#{project.cohortName}"
+					p #{project.projectProposalDescription}
+
+				
+					h2 Your next deliverable is:
+					p#next-deliverable #{deliverables[0].name} - #{deliverables[0].dueDate}
+
+					h2 Deliverables
+					#deliverables
+						each deliverable in deliverables
+							.project-deliverable
+								a(href="/deliverables/"+deliverable.id) #{deliverable.name} - #{deliverable.dueDate} - #{deliverable.weighting}
+								a.button(href="/projects/"+project.id+"/makesubmission/"+deliverable.id) Create submission
+						if deliverables.length == 0
+							p No deliverables set yet
+
+					h2 Submissions
+					each deliverable in deliverables
+						if deliverable.submissions.length > 0
+							h3 #{deliverable.name}
+							each submission in deliverable.submissions
+								a(href="/submissions/"+submission.id) #{submission.createdOn}
+
+					h2 Actions
+					.actions
+						button Email Supervisor
+						button Project Info
+						button(onclick="github("+ (project.githubLink != null ? "\""+project.githubLink+"\"" : project.githubLink) +")") Github
+						button(onclick="overleaf("+ (project.overleafLink != null ? "\""+project.overleafLink+"\"" : project.overleafLink) +")") Overleaf
+					.container.white.bordered.p1.m1-top(id="githubform", name="githubform", style="display: none;")
+						form.input_flexbox(method="post", enctype="multipart/form-data", action="/overview/github")
+							input.m1-top(type="text", name="githubLink", Placeholder=(project.githubLink != null ? project.githubLink : "https://github.com/"))
+							input.login_submit.m1-top(type="submit")
+					.container.white.bordered.p1.m1-top(id="overleafForm", name="overleafForm", style="display: none;")
+						form.input_flexbox(method="post", enctype="multipart/form-data", action="/overview/overleaf")
+							input.m1-top(type="text", name="overleafLink", Placeholder=(project.overleafLink != null ? project.overleafLink : "https://www.overleaf.com/"))
+							input.login_submit.m1-top(type="submit")
+
+					if agreedMarks.length > 0
+						h2 Returned Marks
+						each agreedMark in agreedMarks
+							p Submission:
+								a(href="/submissions/" + agreedMark.submissionId) Submission
+							p #{agreedMark.mark} / #{agreedMark.total}
+
+			if user.isSupervisor
+				h3 Students
+				each student in projectStudents
+					a(href="/users/"+student.id) #{student.name}
+				if projectStudents.length == 0
+					p No students assigned yet
+
+				h3 Supervisors
+				each supervisor in projectSupervisors
+					a(href="/users/"+supervisor.id) #{supervisor.name}
+				if projectSupervisors.length == 0
+					p No supervisors assigned yet
+				
+				h3 Moderators 
+				each moderator in projectModerators
+					a(href="/users/"+moderator.id) #{moderator.name}
+				if projectModerators.length == 0
+					p No moderators assigned yet
+
+				if user.isAdmin 
+					.m1-top 
+						input#moderator-name-input(type="text", placeholder="Type a moderator name")
+						#moderator-box
+
+				h3 Submissions
+				h4 Unmarked
+				if (unmarkedProjectSubmissions.length > 0)
+					each submission in unmarkedProjectSubmissions
+						p
+							a(href="/submissions/" + submission.id) #{submission.deliverableName} Submitted On #{submission.createdOn}
+							|  by 
+							a(href="/users/" + submission.studentId) #{submission.studentName}
+				else 
+					p No Unmarked Submissions For This Project
+				h4 Marked
+				if (markedProjectSubmissions.length > 0)
+					each submission in markedProjectSubmissions
+						p
+							a(href="/submissions/" + submission.id) #{submission.deliverableName} Submitted On  #{submission.createdOn}
+							|  by 
+							a(href="/users/" + submission.studentId) #{submission.studentName}
+				else 
+					p No Marked Submissions For This Project

@@ -1,0 +1,67 @@
+doctype html
+html(lang="en")
+	head
+		include includes/head.pug
+		script(src="/js/pathway.js") 
+	body
+		include includes/header.pug
+		main
+			h2 #{pathway.name}
+			div
+				details(open)
+					summary
+						h3 See what project proposals are in this pathway
+					table
+						thead
+							tr
+								th Title
+								th Created By
+						tbody
+							each projectProposal in projectProposals
+								tr
+									td
+										a(href="/projectproposals/" + projectProposal.id)  #{projectProposal.title}
+									td
+										if projectProposal.createdBy
+											a(href="/users/" + projectProposal.createdBy) #{projectProposal.createdByName}
+										else
+											| Anonymous
+				details(open)
+					summary
+						h3.m1-bottom See what students are in this pathway
+					.pathway-cohorts
+						- for(let i = 0; i < cohorts.length; i++) {
+						details.pathway-cohort
+							summary #{cohorts[i].name}
+							table.pathway-cohort-students
+								thead
+									tr
+										th Name
+										th Email
+										th Campus Card Number
+										th Link
+								tbody
+								- for(let j = 0; j < cohorts[i].students.length; j++) {
+									tr.pathway-cohort-student
+										td #{cohorts[i].students[j].user.name}
+										td #{cohorts[i].students[j].user.email}
+										td #{cohorts[i].students[j].user.campusCardNumber}
+										td
+											a(href="/students/" + cohorts[i].students[j].id) Go To Student
+								- }
+						- }
+				details(open)
+					summary
+						h3 See who moderates this pathway
+					div
+						if supervisors.length > 0
+							div
+								for supervisor in supervisors
+									p #{JSON.stringify(supervisor)}
+						else
+							p No one is moderating this pathway yet!
+				details(open)
+					summary
+						h3 Deliverables
+					div
+						a(href="/pathways/"+pathway.id+"/deliverables/new") Create Deliverable
