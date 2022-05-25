@@ -869,7 +869,7 @@ app.get("/cohorts/:cohortId/marks.csv", (req, res) => {
 			else
 				mark.role = "moderator";
 
-			string += row.pathwayName + "," + row.studentNum + "," + row.deliverableName + "," + mark.totalMark + "," + mark.markerName + "," + mark.role + "," + row.agreedMark + "," + row.alert + "," + row.span + "\n";
+			string += row.pathwayName + "," + row.studentNum + "," + row.deliverableName + "," + mark.totalMark + "," + mark.markerName + "," + mark.role + "," + row.agreedMark + "," + (row.alert ? "✗" : "✓") + "," + (row.span ? "✗" : "✓") + "\n";
 		}
 	}
 	res.send(string);
