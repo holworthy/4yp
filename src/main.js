@@ -18,7 +18,7 @@ let db = betterSqlite3("database.db");
 db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, nickname TEXT, email TEXT UNIQUE, salt TEXT, passwordHash TEXT, campusCardNumber TEXT UNIQUE DEFAULT NULL, threeTwoThree TEXT UNIQUE DEFAULT NULL, maxNumToSupervise INTEGER DEFAULT 0, isAdmin INTEGER DEFAULT 0, isStudent INTEGER DEFAULT 0, isSupervisor INTEGER DEFAULT 0, isHubstaff INTEGER DEFAULT 0)");
 
 db.exec("CREATE TABLE IF NOT EXISTS markschemes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-db.exec("CREATE TABLE IF NOT EXISTS markschemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, weight INTEGER, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
+db.exec("CREATE TABLE IF NOT EXISTS markschemesParts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, weight INTEGER, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE, UNIQUE(name, markschemeId))");
 db.exec("CREATE TABLE IF NOT EXISTS marksheets (id INTEGER PRIMARY KEY AUTOINCREMENT, markschemeId INTEGER, FOREIGN KEY (markschemeId) REFERENCES markschemes(id) ON DELETE CASCADE)");
 db.exec("CREATE TABLE IF NOT EXISTS marksheetsParts(id INTEGER PRIMARY KEY AUTOINCREMENT, marksheetId INTEGER, markschemePartId INTEGER, mark REAL, feedback TEXT, UNIQUE(marksheetId, markschemePartId), FOREIGN KEY (marksheetId) REFERENCES marksheets(id) ON DELETE CASCADE, FOREIGN KEY (markschemePartId) REFERENCES markschemesParts(id) ON DELETE CASCADE)");
 
@@ -79,7 +79,14 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 
 db.exec("INSERT OR IGNORE INTO markschemes(name) VALUES ('Mark Scheme 1')");
-db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Amazingness', 100.0, 1)");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Design', 30.0, 1)");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Implementation', 50.0, 1)");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Quality of Code', 20.0, 1)");
+
+db.exec("INSERT OR IGNORE INTO markschemes(name) VALUES ('Mark Scheme 2')");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Design', 30.0, 2)");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Implementation', 50.0, 2)");
+db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('SPaG', 20.0, 2)");
 
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('AI')");
 db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Graphics')");
