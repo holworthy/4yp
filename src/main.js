@@ -70,11 +70,9 @@ db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, 
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Sammy Student', 'Sammy', 'sammy@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100000000', 'abc12xyz', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Simon Supervisor', 'Simon', 'simon@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, isHubstaff) VALUES ('Helen Hubstaff', 'Helen', 'helen@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 1)");
-db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('a student', 'student1', 'student@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100255555', 'abc123xz', 1)");
 db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, maxNumToSupervise, isSupervisor) VALUES ('Sarah Supervisor', 'Sarah', 'sarah@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', 5, 1)");
-for(let i = 1; i <= 10; i++)
-	db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('Student "+i+"', 'Student "+i+"', 'student"+i+"@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '10020000"+i+"', 'abc123x"+i+"', 1)");
 
+["Dan", "Jack", "Rohan", "Sudeep", "Taylor", "George"].forEach(value => db.exec("INSERT OR IGNORE INTO users(name, nickname, email, salt, passwordHash, campusCardNumber, threeTwoThree, isStudent) VALUES ('" + value + " Student', '" + value + "', '" + value.toLowerCase() + "@example.com', '00000000', '5470866c4182b753e5d8c095e65628e3f0c31a3645a92270ff04478ee96c2564', '100200000', 'abc12xyz', 1)"));
 
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Computer Science')");
 db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Business')");
@@ -83,16 +81,19 @@ db.exec("INSERT OR IGNORE INTO pathways(name) VALUES ('Stats')");
 db.exec("INSERT OR IGNORE INTO markschemes(name) VALUES ('Mark Scheme 1')");
 db.exec("INSERT OR IGNORE INTO markschemesParts(name, weight, markschemeId) VALUES ('Amazingness', 100.0, 1)");
 
-db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 1')");
-db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Tag 2')");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 1', 'Project Proposal 1 Description', 1, 0, 1, 3)");
-db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('Project Proposal 2', 'Project Proposal 2 Description', 1, 0, 1, 3)");
+db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('AI')");
+db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Graphics')");
+db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Machine Learning')");
+db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Java')");
+db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Programming')");
+db.exec("INSERT OR IGNORE INTO tags(name) VALUES ('Research')");
+
+db.exec("INSERT OR IGNORE INTO projectProposals(title, description, approved, archived, markschemeId, createdBy) VALUES ('XBattle', 'Program XBattle in Java', 1, 0, 1, 3)");
 db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (1, 3)");
-db.exec("INSERT OR IGNORE INTO projectProposalsSupervisors(projectProposalId, supervisorId) VALUES (2, 3)")
-db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 2)");
+db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 4)");
+db.exec("INSERT OR IGNORE INTO projectProposalsTags(projectProposalId, tagId) VALUES (1, 5)");
 db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 1)");
-db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (2, 1)");
+db.exec("INSERT OR IGNORE INTO projectProposalsPathways(projectProposalId, pathwayId) VALUES (1, 2)");
 
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Programming 1', 'CMP-4008Y')");
 db.exec("INSERT OR IGNORE INTO modules(name, code) VALUES ('Systems Development', 'CMP-4013A')");
@@ -1745,10 +1746,5 @@ app.get("/agreedmarks/:agreedMarksId/agree", (req, res) => {
 	stmt.run(req.params.agreedMarksId);
 	res.redirect("/");
 });
-
-/*
-BIG TODO:
-- calculate final mark
-*/
 
 app.listen(8080);
